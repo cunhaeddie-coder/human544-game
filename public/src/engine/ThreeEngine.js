@@ -178,9 +178,11 @@ export class ThreeEngine {
     // Sync HUD div
     const hud = document.getElementById('hud');
     if (hud) {
-      hud.style.width  = GW * r + 'px';
-      hud.style.height = GH * r + 'px';
+      hud.style.width    = GW * r + 'px';
+      hud.style.height   = GH * r + 'px';
       hud.style.fontSize = r + 'em';
     }
+    // Sync ability panel (dentro do hud, herda o fontSize acima)
+    // Nada extra necessário — usa em units que escalam com fontSize
   }
 }

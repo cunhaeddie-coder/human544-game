@@ -27,15 +27,57 @@
     #hud-room   { position:absolute; top:36px; right:60px; font-size:10px; color:#445566; }
 
     /* ── Barra de Habilidade Especial ── */
-    #hud-ability-wrap {
-      position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
-      width:180px; height:14px; background:rgba(0,0,0,0.5);
-      border:1px solid #224466; border-radius:7px; overflow:hidden;
+    #ability-panel {
+      position:absolute;
+      bottom: 2.5%;        /* % do container → escala junto com o jogo */
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      pointer-events: none;
     }
-    #hud-ability { height:100%; width:0%; background:#0088ff; transition:width 0.2s, background 0.3s; border-radius:7px; }
     #hud-ability-label {
-      position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
-      font-size:11px; color:#4499ff; font-family:monospace; white-space:nowrap;
+      font-size: 1.1em;
+      color: #66aaff;
+      font-family: monospace;
+      white-space: nowrap;
+      text-shadow: 0 0 6px #004488;
+      letter-spacing: 1px;
+    }
+    #hud-ability-wrap {
+      width: 16em;            /* relativo ao font-size escalado */
+      height: 1.4em;
+      background: rgba(0,0,0,0.6);
+      border: 1.5px solid #224466;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #hud-ability {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0055bb, #0088ff);
+      transition: width 0.15s linear, background 0.3s;
+      border-radius: 8px;
+    }
+    #hud-ability.ready {
+      background: linear-gradient(90deg, #cc8800, #ffee00);
+      animation: pulse-ability 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes pulse-ability {
+      from { opacity: 0.7; box-shadow: 0 0 4px #ffdd00; }
+      to   { opacity: 1.0; box-shadow: 0 0 14px #ffee00, 0 0 30px #ffaa00; }
+    }
+    #hud-ability-key {
+      font-size: 1.0em;
+      color: #aaaaaa;
+      font-family: monospace;
+    }
+    #hud-ability-key.ready {
+      color: #ffee00;
+      font-weight: bold;
+      animation: pulse-ability 0.6s ease-in-out infinite alternate;
     }
     #hud-xp {
       position:absolute; top:36px; left:18px; font-size:10px; color:#335544;
@@ -220,8 +262,11 @@
     <div id="hud-coins"></div>
     <div id="hud-level"></div>
     <div id="hud-msg"></div>
-    <div id="hud-ability-label">0%</div>
-    <div id="hud-ability-wrap"><div id="hud-ability"></div></div>
+    <div id="ability-panel">
+      <div id="hud-ability-label">HABILIDADE — 0%</div>
+      <div id="hud-ability-wrap"><div id="hud-ability"></div></div>
+      <div id="hud-ability-key">[Q] para usar</div>
+    </div>
     <div id="hud-room"></div>
     <div id="hud-xp" style="position:absolute;bottom:14px;left:18px;font-size:10px;color:#8899aa;"></div>
   </div>

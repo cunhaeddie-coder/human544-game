@@ -53,6 +53,9 @@ export class Player {
     const skin = SaveSystem.getActiveSkin() || 'default';
     const name = SaveSystem.getPlayerName?.() || '';
     this.sprite = new CharacterSprite(scene.engine.scene, x, y, skin, name);
+
+    // Inicializa HUD da habilidade imediatamente
+    this._updateAbilityHUD();
   }
 
   get x() { return this.body.x + this.body.w / 2; }
@@ -63,6 +66,13 @@ export class Player {
     const b   = this.body;
     const g   = this.scene.physics.gravity;
     const spd = 180 * this._speedMult;
+
+    // Sincroniza arma ativa (pode ter mudado na loja)
+    const savedWeapon = SaveSystem.getActiveWeapon() || 'standard';
+    if (savedWeapon !== this._weapon) {
+      this._weapon = savedWeapon;
+      this._updateAbilityHUD();
+    }
 
     this.onLadder = this._nearLadder(ladderBodies);
 
@@ -96,8 +106,14 @@ export class Player {
     if (input.justDown('Space')) this._shoot();
 
     // Habilidade especial
-    if (this._abilityCooldown > 0) this._abilityCooldown -= dt;
-    if (input.justDown('KeyQ') && this._abilityReady) this._useAbility();
+    if (this._abilityCooldown > 0) {
+      this._abilityCooldown = Math.max(0, this._abilityCooldown - dt);
+      this._updateAbilityHUD();           // atualiza countdown a cada frame
+    }
+    if (input.justDown('KeyQ')) {
+      if (this._abilityReady) this._useAbility();
+      else this._updateAbilityHUD();      // feedback visual mesmo sem carga
+    }
 
     // ── Humor ──────────────────────────────────────────────────
     if (input.justDown('KeyT') && b.onGround) this._dance();
@@ -372,13 +388,39 @@ export class Player {
   }
 
   _updateAbilityHUD() {
-    const el = document.getElementById('hud-ability');
-    if (!el) return;
-    const pct = this._abilityCharge / this._abilityMax;
-    el.style.width = `${pct * 100}%`;
-    el.style.background = this._abilityReady ? '#ffee00' : '#0088ff';
+    const bar   = document.getElementById('hud-ability');
     const label = document.getElementById('hud-ability-label');
-    if (label) label.textContent = this._abilityReady ? '⚡ Q' : `${Math.floor(pct * 100)}%`;
+    const key   = document.getElementById('hud-ability-key');
+    if (!bar) return;
+
+    const ABILITY_NAMES = {
+      standard: 'DISPARO CIRCULAR',
+      double:   'TURBO VELOZ',
+      spread:   'EXPLOSÃO AOE',
+      laser:    'SUPER LASER',
+      rocket:   'CHUVA DE MÍSSEIS',
+      mjolnir:  'TROVÃO TOTAL',
+    };
+    const name = ABILITY_NAMES[this._weapon] || 'HABILIDADE';
+
+    if (this._abilityReady) {
+      bar.style.width = '100%';
+      bar.classList.add('ready');
+      if (label) label.textContent = `⚡ ${name} — PRONTO!`;
+      if (key)   { key.textContent = '[Q] USAR AGORA!'; key.classList.add('ready'); }
+    } else if (this._abilityCooldown > 0) {
+      const pct = 1 - (this._abilityCooldown / 8);
+      bar.style.width = `${pct * 100}%`;
+      bar.classList.remove('ready');
+      if (label) label.textContent = `${name} — recarga ${this._abilityCooldown.toFixed(1)}s`;
+      if (key)   { key.textContent = '[Q] recarregando...'; key.classList.remove('ready'); }
+    } else {
+      const pct = this._abilityCharge / this._abilityMax;
+      bar.style.width = `${pct * 100}%`;
+      bar.classList.remove('ready');
+      if (label) label.textContent = `${name} — ${Math.floor(pct * 100)}%`;
+      if (key)   { key.textContent = '[Q] carregando...'; key.classList.remove('ready'); }
+    }
   }
 
   takeDamage() {
