@@ -20,6 +20,7 @@ import { PetSystem }      from '../PetSystem.js';
 import { CharacterSprite } from '../CharacterSprite.js';
 import { TouchControls }  from '../engine/TouchControls.js';
 import { FXSystem }       from '../systems/FXSystem.js';
+import { Audio }          from '../systems/AudioSystem.js';
 
 const TW = 64, TH_GR = 32, TH_PL = 20, LAD_H = 64;
 
@@ -138,6 +139,7 @@ export class GameScene {
     this._buildEnemies(cfg);
 
     // Boss
+    if (cfg.boss)               setTimeout(() => Audio.bossAlert(), 3200);
     if (cfg.boss === 'robot')   this.boss = new BossRobot(this, this.physics);
     if (cfg.boss === 'dragon')  this.boss = new BossDragon(this, this.physics);
     if (cfg.boss === 'phoenix') this.boss = new BossPhoenix(this, this.physics);
@@ -484,6 +486,7 @@ export class GameScene {
   }
 
   _activateExit() {
+    Audio.bossDie();
     this._exitLocked = false;
     if (this.exitMesh) {
       this.exitMesh.material.color.set(0x00ffaa);
@@ -554,6 +557,7 @@ export class GameScene {
         SaveSystem.addCoins(5);
         this.fx?.spawnCollectPop(c.startY > 0 ? c.body.x + 7 : p.x, c.startY, 0xffd700);
         this.fx?.spawnTextPop(p.x, p.y - 30, '+5', 0xffd700);
+        Audio.coin();
         this.updateHUD();
         return false;
       }
@@ -570,6 +574,7 @@ export class GameScene {
           this._showMsg('Estrela coletada! +50 moedas');
           this.fx?.spawnCollectPop(s.body.x + 9, s.body.y + 9, 0xffee00);
           this.fx?.spawnTextPop(p.x, p.y - 40, '★ +50', 0xffee00);
+          Audio.star();
           this.updateHUD();
         }
         this.engine.remove(s.mesh);
@@ -590,6 +595,7 @@ export class GameScene {
         cp.mesh.material.color.set(0x00ff88);
         cp.mesh.material.emissive = new THREE.Color(0x00aa44);
         this._showMsg(`Checkpoint ${cp.id} salvo!`);
+        Audio.checkpoint();
       }
     });
 
@@ -623,6 +629,7 @@ export class GameScene {
         } else {
           en.hit(50);
           this.fx?.spawnHitFlash(en.x, en.y);
+          Audio.enemyHit();
           if (p._weapon === 'mjolnir') this._spawnLightning(en.x, en.y);
           bl.active = false;
         }
@@ -675,8 +682,9 @@ export class GameScene {
         this.fx?.spawnTextPop(en.x, en.y - 20, `+${en.def?.reward || 5}`, 0x44ff88);
         const prevLvl = SaveSystem.getPlayerLevel();
         const newLvl  = SaveSystem.addXP(15);
-        if (newLvl > prevLvl) this._showMsg(`⬆ LEVEL UP! Nível ${newLvl}`, 3000);
+        if (newLvl > prevLvl) { this._showMsg(`⬆ LEVEL UP! Nível ${newLvl}`, 3000); Audio.levelUp(); }
         p.addKillCharge?.(20);
+        Audio.enemyDie();
         // Sync kill para outros jogadores online
         this.network?.socket?.emit('enemyKilled', { id: en._netId ?? idx });
         this.updateHUD();
@@ -699,6 +707,7 @@ export class GameScene {
   _onExit() {
     if (this._exiting) return;
     this._exiting = true;
+    Audio.phaseComplete();
     SaveSystem.unlockPhase(this.levelNum + 1);
     const prevLvl = SaveSystem.getPlayerLevel();
     const newLvl  = SaveSystem.addXP(this.levelNum * 20);

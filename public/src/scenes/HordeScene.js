@@ -3,6 +3,7 @@ import { Physics2D, Body } from '../engine/Physics2D.js';
 import { Player } from '../Player.js';
 import { Enemy }  from '../Enemy.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { Audio } from '../systems/AudioSystem.js';
 
 export class HordeScene {
   constructor(e, m, i) {
@@ -28,9 +29,10 @@ export class HordeScene {
     this.currentConfig = null;
   }
 
-  // GameScene-compatible getters que Enemy usa
-  get engine() { return this.e; }
-  updateHUD() { this._updateHudText(); }
+  // GameScene-compatible getters que Enemy e Player usam
+  get engine()  { return this.e; }
+  get enemies() { return this._enemies; }
+  updateHUD()   { this._updateHudText(); }
 
   create() {
     const E = this.e;
@@ -84,6 +86,7 @@ export class HordeScene {
     this._toSpawn = count;
     this._spawnCd = 0;
     this._showMsg(`ONDA ${this._wave}!`, 2000);
+    Audio.waveStart();
     this._updateHudText();
   }
 
@@ -96,9 +99,8 @@ export class HordeScene {
     const type = types[Math.floor(Math.random() * types.length)];
     const side = Math.random() < 0.5;
     const x = side ? 80 : 1200;
-    const en = new Enemy(this, this.physics, type, x, 460);
-    // Escala velocidade com onda
-    en.body.vx *= (1 + this._wave * 0.08);
+    const en = new Enemy(this, this.physics, x, 460, type, 300);
+    en._netId = this._enemies.length;
     this._enemies.push(en);
     this._toSpawn--;
   }
@@ -161,17 +163,24 @@ export class HordeScene {
       if (!bl.active) return;
       this._enemies.forEach(en => {
         if (!en.alive) return;
-        if (this.physics.overlaps(bl.body, en.body)) { en.hit(50); bl.active = false; }
+        if (this.physics.overlaps(bl.body, en.body)) { en.hit(50); bl.active = false; Audio.enemyHit(); }
       });
     });
 
-    // Remove mortos
+    // Remove mortos + carrega habilidade especial
     const before = this._enemies.length;
-    this._enemies = this._enemies.filter(e => e.alive);
+    this._enemies = this._enemies.filter(e => {
+      if (!e.alive) {
+        this.player.addKillCharge?.(20);
+        return false;
+      }
+      return true;
+    });
     const died = before - this._enemies.length;
     if (died > 0) {
       this._kills += died;
       this._score += died * 10 + this._wave * 5;
+      Audio.enemyDie();
       this._updateHudText();
     }
 

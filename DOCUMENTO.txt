@@ -1,7 +1,20 @@
 ================================================================================
   HUMAN 544 — DOCUMENTO DE CONTEXTO DO PROJETO
-  Gerado em: 2026-04-29
+  Atualizado em: 2026-05-17
 ================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  STACK TECNOLÓGICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Frontend : Three.js 0.184 (motor 3D via CDN) + Web Audio API (sons sintéticos)
+  Backend  : Node.js 24 + Express 5 + Socket.io 4.8
+  Storage  : localStorage (SaveSystem — sem banco de dados)
+  Deploy   : Railway (https://human544-game-production.up.railway.app)
+  GitHub   : https://github.com/cunhaeddie-coder/human544-game
+  Dev local: npm start (porta 3000) | npm run dev (watch mode)
+  Ngrok    : C:\Users\Edimar'\Downloads\ngrok-v3-stable-windows-amd64\ngrok.exe http 3000
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -10,206 +23,223 @@
 
 PlatformerGame/
 ├── server.js                         Servidor Node.js (Express + Socket.io)
-├── package.json                      Dependencias: express ^5.2.1, socket.io ^4.8.3
-├── package-lock.json
+├── package.json                      Dependências
+├── .gitignore
 ├── DOCUMENTO.txt                     Este arquivo
-├── node_modules/
 └── public/
-    ├── index.html                    Entry point HTML (carrega Phaser 3 via CDN)
+    ├── index.html                    Entry point + HUD HTML
     └── src/
-        ├── main.js                   Config do Phaser e instancia do Game
-        ├── Player.js                 Classe Player (movimento, tiro, dano, respawn)
-        ├── Enemy.js                  Classe Enemy base (patrol, hit, morte)
-        ├── Network.js                Cliente Socket.io (envia/recebe posicao)
+        ├── main.js                   Config do Three Engine e SceneManager
+        ├── Player.js                 Jogador P1 (WASD+Espaço+Q+T+B)
+        ├── LocalPlayer2.js           Jogador P2 local (Setas+Enter)
+        ├── Enemy.js                  Inimigo base (patrol, follow, shooter, etc.)
+        ├── CharacterSprite.js        Sprites pixel art em canvas
+        ├── Network.js                Cliente Socket.io (salas, move, sync)
+        ├── PetSystem.js              Pets ativos que atacam inimigos
         ├── enemies/
-        │   ├── EnemyTypes.js         Definicao visual/comportamento de cada tipo
-        │   ├── BossRobot.js          Boss da Etapa A (fase 5)
-        │   └── BossDragon.js         Boss da Etapa B (fase 10) com fantasmas
+        │   ├── EnemyTypes.js         Definição de 23 tipos de inimigo
+        │   ├── BossRobot.js          Boss fase 5
+        │   ├── BossDragon.js         Boss fase 10
+        │   ├── BossPhoenix.js        Boss fase 15 (ressurge 1x)
+        │   ├── BossLich.js           Boss fase 20 (escudo mágico)
+        │   ├── BossGolem.js          Boss fase 25 (slam + rochas)
+        │   ├── BossHydra.js          Boss fase 30 (3 cabeças independentes)
+        │   ├── BossVoid.js           Boss fase 35 (inverte gravidade)
+        │   ├── BossTitan.js          Boss fase 40 (escudo + laser rotatório)
+        │   ├── BossOmega.js          Boss fases 45+50 (3 fases, boss final)
+        │   └── VenusPlant.js         Planta hostil
+        ├── engine/
+        │   ├── Input.js              Teclado (P1=WASD, P2=Setas)
+        │   ├── Physics2D.js          Física arcade 2D
+        │   ├── SceneManager.js       Gerenciador de cenas
+        │   ├── ThreeEngine.js        Wrapper Three.js (ortho camera)
+        │   ├── ThreeEngine3D.js      Engine perspectiva (Minecraft)
+        │   └── TouchControls.js      Controles touch mobile
         ├── levels/
-        │   └── LevelConfig.js        Configuracao declarativa das 10 fases
+        │   └── LevelConfig.js        50 fases (A-J, 10 bosses únicos)
         ├── scenes/
-        │   ├── BootScene.js          Carrega todos os assets (sprites, tiles, audio)
+        │   ├── BootScene.js          Carrega assets
         │   ├── MenuScene.js          Tela inicial HUMAN / 544
-        │   ├── ModeScene.js          Selecao de modo (solo / cooperativo / PvP)
-        │   ├── GameScene.js          Loop principal do jogo (fisica, colisoes, update)
-        │   ├── HUDScene.js           Sobreposicao: vida, moedas, mensagens, checkpoint
+        │   ├── ModeScene.js          Seleção de modo
+        │   ├── GameScene.js          Loop principal (física, colisões, FX)
+        │   ├── HordeScene.js         Modo horda (ondas infinitas)
+        │   ├── HUDScene.js           HUD overlay
+        │   ├── OnlineScene.js        Lobby multiplayer online
+        │   ├── PVPScene.js           PVP local e online
+        │   ├── LeisureScene.js       Hub de 12 minijogos
         │   ├── ShopScene.js          Loja de upgrades e skins
-        │   ├── MissionsScene.js      Sistema de missoes e recompensas
-        │   ├── PVPScene.js           Modo jogador vs jogador
-        │   └── LeisureScene.js       Modo relaxado / exploracao livre
+        │   ├── MissionsScene.js      Missões e conquistas
+        │   ├── RankingScene.js       Ranking dos minijogos
+        │   ├── MinecraftScene.js     Modo voxel 3D (WASD + mouse)
+        │   ├── FootballScene.js      Minijogo futebol
+        │   ├── RacingScene.js        Minijogo corrida
+        │   ├── SurvivalScene.js      Minijogo plataformas que caem
+        │   ├── TargetsScene.js       Minijogo tiro ao alvo
+        │   ├── SumoScene.js          Minijogo sumô
+        │   ├── CoinRushScene.js      Minijogo corrida de moedas
+        │   ├── DodgeScene.js         Minijogo esquiva
+        │   ├── KingHillScene.js      Minijogo rei do morro
+        │   ├── BombScene.js          Minijogo passa a bomba
+        │   ├── BreakoutScene.js      Minijogo breakout
+        │   ├── SnakeScene.js         Minijogo snake
+        │   └── ColorFloorScene.js    Minijogo piso colorido
         └── systems/
-            ├── SaveSystem.js         Persistencia local (moedas, estrelas, upgrades)
-            └── ShopData.js           Catalogo de itens da loja
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  STACK TECNOLOGICA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  Frontend : Phaser 3 (via CDN) — motor de jogo 2D com fisica Arcade
-  Backend  : Node.js 24 + Express 5 (servidor HTTP estatico)
-  Realtime : Socket.io 4.8 (sincronizacao multiplayer em tempo real)
-  Storage  : localStorage (SaveSystem — sem banco de dados)
-  Porta    : 3000 (local)  |  npm start  ou  npm run dev (watch mode)
-  Deploy   : nenhum configurado — apenas local por enquanto
+            ├── SaveSystem.js         Persistência (moedas, fases, ranking)
+            ├── ShopData.js           Catálogo da loja
+            ├── FXSystem.js           Partículas, shake, flash, text pop
+            └── AudioSystem.js        Sons sintéticos via Web Audio API
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   CONTEXTO DO JOGO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Genero    : Platformer 2D de scroll lateral com elementos de shooter
-  Resolucao : 960 x 540 px (FIT + CENTER — escala automatica)
-  Tela      : 540 px de altura fixa; mundo se expande horizontalmente por fase
+  Gênero    : Platformer 2D + Shooter lateral + Modos extras
+  Resolução : 960×540 px (FIT + CENTER)
+  Fases     : 50 fases (Etapas A-J, 10 bosses únicos)
 
-  ESTRUTURA DAS FASES
+  CONTROLES P1
+  ------------
+  A / D         : Mover
+  W             : Pular / Subir escada
+  S             : Descer escada
+  Espaço        : Atirar
+  Q             : Habilidade especial (carrega com kills — ver tabela abaixo)
+  T             : DANÇA (bouncing + melodia)
+  B             : TAUNT (mensagem aleatória engraçada)
+  ↑↑↓↓←→←→BA  : CÓDIGO KONAMI → 10s de invencibilidade!
+
+  CONTROLES P2 (mesmo teclado — modo coop)
+  -----------------------------------------
+  ← / →         : Mover
+  ↑             : Pular
+  Enter         : Atirar
+
+  HABILIDADES ESPECIAIS (tecla Q — carrega matando 5 inimigos)
+  -------------------------------------------------------------
+  Pistola    : Disparo circular (12 balas em 360°)
+  Dupla      : Aceleração +80% por 3 segundos
+  Espingarda : Explosão AOE (dano 200 em raio 200px)
+  Laser      : Rajada rápida 20 tiros em 2 segundos
+  Foguete    : 5 mísseis em sequência no inimigo mais próximo
+  Mjolnir    : Raio em TODOS os inimigos na tela
+
+  ÁUDIO (Web Audio API — sintético, sem arquivos)
+  ------------------------------------------------
+  jump, shoot, shootLaser, shootRocket, playerHit,
+  enemyHit, enemyDie, bossDie, coin, star, checkpoint,
+  levelUp, phaseComplete, abilityReady, abilityUse,
+  bossAlert, waveStart, dance, taunt, konami, menuClick
+
+  BOSSES ÚNICOS
+  -------------
+  Fase  5 : BossRobot   — atira projéteis, acelera com dano
+  Fase 10 : BossDragon  — voa, invoca fantasmas
+  Fase 15 : BossPhoenix — ressurge 1× com 50% HP, chuva de fogo
+  Fase 20 : BossLich    — escudo mágico (absorve 8 golpes), raios duplos
+  Fase 25 : BossGolem   — slam com shockwave, lança pedras em arco
+  Fase 30 : BossHydra   — 3 cabeças com HP independente, veneno
+  Fase 35 : BossVoid    — teleporta, projéteis radiais, INVERTE GRAVIDADE
+  Fase 40 : BossTitan   — escudo hexagonal (20 hits para quebrar), laser rotatório
+  Fase 45 : BossOmega   — 3 fases (normal/laranja/roxo), clones, chuva vertical
+  Fase 50 : BossOmega   — versão apocalíptica (mesmo boss, HP maior)
+
+  INIMIGOS (23 tipos)
   -------------------
-  10 fases divididas em 2 etapas:
-
-  ETAPA A — "Do chao ao espaco"
-    Fase 1  : Pradaria Verde       (inimigos: slime, bee)
-    Fase 2  : Floresta Densa       (inimigos: mushroom, spider)
-    Fase 3  : Caverna de Cristal   (inimigos: golem, bat)
-    Fase 4  : Montanha Nevada      (inimigos: wolf, yeti)
-    Fase 5  : Plataforma Espacial  (inimigos: drone, shield_bot | BOSS: Robot)
-
-  ETAPA B — "Descendo as trevas"
-    Fase 6  : Floresta Amaldioada  (inimigos: shadow, witch)
-    Fase 7  : Pantano Toxico       (inimigos: toad, croc)
-    Fase 8  : Caverna Vulcanica    (inimigos: fire_slime, fire_bat)
-    Fase 9  : Abismo Gelado        (inimigos: ice_golem, frost_wolf)
-    Fase 10 : Covil do Dragao      (inimigos: dragon_guard | BOSS: Dragon)
-
-  MECANICAS DO PLAYER
-  -------------------
-  Movimento  : A/D ou setas (velocidade base 180px/s + bonus de upgrade)
-  Pulo       : W ou seta cima (altura ~80-104px dependendo da gravidade da fase)
-  Escada     : zona estatica — perto da escada desativa gravidade, W/S sobem/descem
-  Tiro       : ESPACO — cooldown 360ms, 4 armas desbloqueaveis na loja:
-               - default  : 1 projétil na direcao olhada
-               - double   : 2 projéteis paralelos
-               - spread   : 3 projéteis em leque (30 graus)
-               - laser    : 1 projétil grande, escala 3x, cor ciano
-               - rocket   : projétil lento e grande, escala 1.8x, laranja
-  Mira       : 8 direcoes (diagonais inclusas via setas de direcao)
-  Vida       : 3 corações base + 1 por upgrade "extra_heart" (max upgrade loja)
-  Invulnera. : 1.6s apos tomar dano (pisca alpha)
-  Checkpoint : toca no objeto para salvar posicao de respawn da fase atual
-  Skin       : tint aplicado no sprite conforme item ativo no SaveSystem
-
-  SISTEMA DE PROGRESSAO
-  ---------------------
-  Moedas     : +5 por moeda coletada, +50 por estrela, usadas na loja
-  Estrelas   : 3 por fase (30 total), salvas permanentemente no SaveSystem
-  Loja       : upgrades permanentes (vida, velocidade, pulo), armas, skins
-  Fases      : desbloqueadas sequencialmente via SaveSystem.unlockPhase()
+  Etapa A: slime, bee, mushroom, spider, golem, bat, wolf, yeti, drone, shield_bot
+  Etapa B: shadow, witch, toad, croc, fire_slime, fire_bat, ice_golem, frost_wolf, dragon_guard
+  Proc:    ghost, shooter, shield, flier
 
   MULTIPLAYER
   -----------
-  Protocolo  : Socket.io rooms — todos jogam no mesmo "sala" global
-  Eventos    : move (posicao x,y,flip,anim), checkpoint (fase+id), disconnect
-  Render     : outros jogadores aparecem como retangulos vermelhos 28x42
-  Estado     : server.js mantem objeto players{} em memoria (reinicia ao restart)
+  Online    : Socket.io rooms (código de 6 letras)
+  Modos     : Campanha online, PVP online, Boss Raid, Lazer (Football/Racing)
+  Coop local: P1=WASD / P2=Setas — câmera zoom dinâmico se afastarem
+  Kill sync : morte de inimigo propagada para todos na sala
 
-  BOSSES
-  ------
-  BossRobot  (fase 5) : fica no chao, tem HP, atira projeteis no player
-  BossDragon (fase 10): voa, invoca fantasmas (ghosts) que o player deve destruir;
-                        saida da fase fica bloqueada ate o boss ser derrotado
+  PROGRESSÃO
+  ----------
+  Moedas     : +5 por moeda, +50 por estrela → loja
+  XP         : +15 por kill, +20×fase por saída
+  Missões    : 40+ missões com recompensas em moedas
+  Ranking    : 12 minijogos com recordes no localStorage
 
-  FISICA
-  ------
-  Engine     : Phaser Arcade Physics
-  Gravidade  : varia por fase (380 a 620) para calibrar altura de pulo
-  Colisoes   : ground (estatico), platforms (one-way — passa de baixo), spikes (dano)
-  Mundo      : setBounds por fase (worldWidth x 540); camera segue player com lerp 0.12
+  MODO HORDA
+  ----------
+  Arena fixa 1280px | Ondas infinitas | Inimigos escalam com onda
+  Score = kills × 10 + onda × 5 + (onda × 100 ao morrer)
+
+  MODO MINECRAFT
+  --------------
+  Engine 3D com câmera perspectiva first-person | WASD + mouse
+  Mundo 128×128×32 com chunks | Ciclo dia/noite | Zumbis à noite
+  10 tipos de bloco: Grama, Terra, Pedra, Madeira, Folha, Água,
+                     Carvão, Ferro, Ouro, Diamante
+
+  MINIJOGOS (12)
+  ---------------
+  Football, Racing, Survival, Targets, Sumo, CoinRush,
+  Dodge, KingHill, Bomb, Breakout, Snake, ColorFloor
+  → Todos salvam score no ranking
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ANALISE: TRANSFORMAR EM 3D — POSSIBILIDADE E SUGESTOES
+  DEPLOY — WORKFLOW
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  VIABILIDADE GERAL
-  -----------------
-  Transformar o HUMAN 544 em 3D e totalmente viavel, mas exige troca de motor.
-  Phaser 3 e exclusivamente 2D. Para 3D as opcoes reais sao:
+  Publicar atualização:
+    cd D:\Projetos\PlatformerGame
+    git add .
+    git commit -m "descrição"
+    git push
+  → Railway faz deploy automático em ~1 minuto
 
-  OPCAO 1 — Three.js (2.5D / pseudo-3D)  [RECOMENDADO PARA CONTINUIDADE]
-  -----------------------------------------------------------------------
-  O jogo manteria a jogabilidade 2D (scroll lateral) mas os visuais seriam
-  em 3D — personagens e cenarios com modelos 3D, camera ortografica ou levemente
-  inclinada. Estilo: Little Big Planet, Ori, Ori and the Blind Forest.
+  Rodar local:
+    cd D:\Projetos\PlatformerGame
+    node server.js
+    → http://localhost:3000
 
-  Vantagens:
-  - Menor reescrita: logica de fisica, fases e saves quase intactos
-  - Curva de aprendizado moderada (Three.js e bem documentado)
-  - Efeitos visivelmente melhores: sombras, profundidade, luzes dinamicas
-  - Multiplayer via Socket.io continua igual
+  Expor externamente (dev):
+    C:\Users\Edimar'\Downloads\ngrok-v3-stable-windows-amd64\ngrok.exe http 3000
 
-  Desvantagens:
-  - Precisaria recriar toda a fisica (Three.js nao tem fisica arcade nativa)
-    → solucao: usar Cannon.js ou Rapier.js junto com Three.js
-  - Assets 2D atuais (sprites) precisariam ser substituidos por modelos 3D (.glb)
-  - Mais complexidade de camera e colisao
 
-  OPCAO 2 — Babylon.js  [MELHOR SUPORTE A FISICA 3D NATIVO]
-  ----------------------------------------------------------
-  Motor 3D completo com fisica integrada (Havok), muito mais robusto para
-  plataformer 3D real (movimento em X, Y e Z como Mario 64 / Crash Bandicoot).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SESSÕES DE TRABALHO — HISTÓRICO DE MELHORIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Vantagens:
-  - Fisica 3D nativa com Havok (gratuito)
-  - Suporte completo a modelos GLTF/GLB, animacoes, sombras, PBR
-  - Playground online para prototipar rapido
-  - Multiplayer via Socket.io continua igual
+  Sessão 1 — Setup inicial
+    - Projeto criado com Phaser 3, migrado para Three.js
+    - 10 fases iniciais (Etapas A e B)
+    - Server Node.js com Socket.io
 
-  Desvantagens:
-  - Reescrita quase total de GameScene, Player e LevelConfig
-  - LevelConfig precisaria mudar de coordenadas 2D para posicoes 3D (x,y,z)
-  - Curva de aprendizado maior
+  Sessão 2 — Expansão 50 fases + multiplayer
+    - 50 fases (Etapas A-J), fases 31-50 procedurais
+    - Modo coop local, online, Boss Raid
+    - 12 minijogos, loja, missões, pets, ranking
 
-  OPCAO 3 — Three.js + Rapier (fisica) + manter logica 2D
-  --------------------------------------------------------
-  Hibrido: usa Three.js para renderizar em 3D mas a fisica continua sendo
-  calculada em 2D (x,y). O eixo Z e apenas visual (parallax de fundo, efeitos).
-  Seria a migracao mais rapida e com menor risco de quebrar o que ja funciona.
+  Sessão 3 — Correções e novas features (2026-05-17)
+    Correções:
+    - HordeScene: construtor Enemy com args trocados (tipo/x/y)
+    - Minecraft: winding order dos blocos (faces invisíveis)
+    - Minecraft: terminal velocity (player atravessava chão)
+    - Minecraft: inventário vazio ao nascer (era 64 de cada bloco)
+    - Multiplayer local: P1 e P2 compartilhavam setas (separado para WASD/Setas)
+    - P2 coop: balas, dano de inimigos, checkpoints e saída ignoravam P2
+    - Habilidade especial: laser não fazia nada (flag sem uso)
+    - Modo Horda: addKillCharge não chamado, getter enemies faltando
 
-  SUGESTOES ANTES DE QUALQUER ALTERACAO
-  ---------------------------------------
-  1. DECIDIR O ESTILO: 2.5D (scroll lateral com visual 3D) ou 3D completo
-     (movimento livre em X/Y/Z). Sao arquiteturas muito diferentes.
-
-  2. PROTOTIPAR PRIMEIRO: criar uma cena isolada em Three.js ou Babylon.js
-     com apenas o player se movendo numa plataforma antes de migrar tudo.
-
-  3. SEPARAR O QUE PODE REAPROVEITAR:
-     - server.js, Network.js, SaveSystem.js, ShopData.js → 100% reutilizaveis
-     - LevelConfig.js → reutilizavel com adaptacao de coordenadas
-     - Player.js logica de input → reutilizavel, apenas trocar Phaser por Three
-     - GameScene.js → reescrita necessaria
-     - Todos os sprites 2D → substituir por modelos 3D .glb
-
-  4. ASSETS 3D GRATUITOS PARA COMECAR:
-     - Kenney.nl (kenney.nl/assets) — pacotes 3D CC0 (sem creditos necessarios)
-     - Quaternius (quaternius.com) — personagens e inimigos animados gratuitos
-     - Sketchfab (sketchfab.com/features/free-3d-models) — busca por CC license
-
-  5. ORDEM SUGERIDA DE MIGRACAO (se decidir ir para 3D):
-     Passo 1 — Instalar Three.js + Rapier e criar cena vazia com plataforma
-     Passo 2 — Migrar Player (input + fisica de pulo/corrida)
-     Passo 3 — Migrar LevelConfig para coordenadas 3D (fase 1 apenas)
-     Passo 4 — Migrar inimigos basicos (slime/bee)
-     Passo 5 — Migrar HUD, SaveSystem, Shop
-     Passo 6 — Migrar multiplayer (praticamente sem mudanca)
-     Passo 7 — Migrar bosses
-     Passo 8 — Migrar as demais 9 fases
-
-  RECOMENDACAO FINAL
-  ------------------
-  Para preservar o maximo do trabalho ja feito e entregar resultado rapido,
-  recomendo OPCAO 3 (Three.js com fisica 2D mantida, profundidade apenas visual).
-  Depois que o jogo estiver rodando visualmente em 3D, a transicao para
-  fisica 3D completa (Babylon ou Three + Rapier) fica muito mais facil.
+    Novas features:
+    - 7 bosses únicos (fases 15-50): Phoenix, Lich, Golem, Hydra, Void, Titan, Omega
+    - Habilidades especiais por arma (Q) com 6 poderes únicos
+    - FXSystem: partículas, screen shake, flash, text pop flutuante
+    - AudioSystem: 20+ sons sintéticos via Web Audio API (sem arquivos)
+    - Humor: dança (T), taunt (B), Código Konami (↑↑↓↓←→←→BA = 10s invencível)
+    - 4 minérios no Minecraft: carvão, ferro, ouro, diamante
+    - Dificuldade aumentada: inimigos mais rápidos, invencibilidade reduzida
+    - Ranking: 6 minijogos adicionados (Sumo, Dodge, Bomb, Breakout, Snake, ColorFloor)
+    - PVP online com sync de posição/balas via Socket.io
+    - Kill sync online: morte de inimigo propagada para todos na sala
+    - Deploy no Railway com URL pública permanente
 
 
 ================================================================================

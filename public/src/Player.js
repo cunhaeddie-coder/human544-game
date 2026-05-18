@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Body }            from './engine/Physics2D.js';
 import { SaveSystem }      from './systems/SaveSystem.js';
 import { CharacterSprite } from './CharacterSprite.js';
+import { Audio }           from './systems/AudioSystem.js';
 
 export class Player {
   constructor(scene, physics, x, y) {
@@ -21,6 +22,10 @@ export class Player {
     this._aimY       = 0;
     this._walkT      = 0;
     this.bullets     = [];
+
+    // Humor
+    this._dancing    = false;
+    this._konamiSeq  = [];
 
     // Sistema de habilidade especial (carrega com kills)
     this._abilityCharge = 0;    // 0-100
@@ -77,6 +82,7 @@ export class Player {
       b.allowGravity = true;
       if (input.justDown('KeyW') && b.onGround) {
         b.vy = (g <= 400 ? -300 : -360) * this._jumpMult;
+        Audio.jump();
       }
     }
 
@@ -89,11 +95,14 @@ export class Player {
     // Shoot
     if (input.justDown('Space')) this._shoot();
 
-    // Habilidade especial (tecla Q ou botão de habilidade)
+    // Habilidade especial
     if (this._abilityCooldown > 0) this._abilityCooldown -= dt;
-    if (input.justDown('KeyQ') && this._abilityReady) {
-      this._useAbility();
-    }
+    if (input.justDown('KeyQ') && this._abilityReady) this._useAbility();
+
+    // ── Humor ──────────────────────────────────────────────────
+    if (input.justDown('KeyT') && b.onGround) this._dance();
+    if (input.justDown('KeyB'))               this._taunt();
+    this._checkKonami(input);
 
     // Shoot timer
     if (this._shooting) {
@@ -138,6 +147,11 @@ export class Player {
     const ax = this._aimX, ay = this._aimY;
     const len = Math.sqrt(ax*ax + ay*ay) || 1;
     this._fireBullets(ax/len, ay/len);
+
+    // Som por tipo de arma
+    if (this._weapon === 'laser')       Audio.shootLaser();
+    else if (this._weapon === 'rocket') Audio.shootRocket();
+    else                                Audio.shoot();
   }
 
   _fireBullets(ax, ay) {
@@ -195,6 +209,7 @@ export class Player {
       this._abilityReady = true;
       this._abilityCharge = this._abilityMax;
       this.scene._showMsg('⚡ HABILIDADE PRONTA! (Q)', 2000);
+      Audio.abilityReady();
     }
     this._updateAbilityHUD();
   }
@@ -205,6 +220,7 @@ export class Player {
     this._abilityCharge  = 0;
     this._abilityCooldown = 8;
     this._updateAbilityHUD();
+    Audio.abilityUse();
 
     switch (this._weapon) {
       case 'standard':
@@ -233,12 +249,21 @@ export class Player {
         }
         this.scene._showMsg('💥 EXPLOSÃO AOE!', 1500);
         break;
-      case 'laser':
-        // Laser: raio contínuo por 2s que atravessa tudo
+      case 'laser': {
+        // Laser: rajada rápida de 20 tiros em 2s
         this._laserBeamActive = true;
-        setTimeout(() => { this._laserBeamActive = false; }, 2000);
+        let laserShots = 0;
+        const laserInt = setInterval(() => {
+          if (!this._laserBeamActive || laserShots >= 20) { clearInterval(laserInt); this._laserBeamActive = false; return; }
+          const ax = this._aimX || this._lastDir, ay = this._aimY;
+          const len = Math.sqrt(ax*ax + ay*ay) || 1;
+          this._fireBullets(ax/len, ay/len);
+          laserShots++;
+        }, 100);
+        setTimeout(() => { this._laserBeamActive = false; clearInterval(laserInt); }, 2100);
         this.scene._showMsg('⚡ SUPER LASER! (2s)', 1500);
         break;
+      }
       case 'rocket':
         // Foguete: 5 foguetes em sequência em direção ao inimigo mais próximo
         let closestEnemy = null, closestDist = 9999;
@@ -255,9 +280,16 @@ export class Player {
         this.scene._showMsg('🚀 CHUVA DE FOGUETES!', 1500);
         break;
       case 'mjolnir':
-        // Mjolnir: raio em todos os inimigos na tela
-        this.scene.enemies?.forEach(en => { if (en.alive) this.scene._spawnLightning(en.x, en.y); });
-        if (this.scene.boss?.alive) this.scene._spawnLightning(this.scene.boss.x, this.scene.boss.y);
+        // Mjolnir: mata/dano em todos os inimigos na tela
+        this.scene.enemies?.forEach(en => {
+          if (!en.alive) return;
+          if (this.scene._spawnLightning) this.scene._spawnLightning(en.x, en.y);
+          else en.hit(300); // fallback para HordeScene
+        });
+        if (this.scene.boss?.alive) {
+          if (this.scene._spawnLightning) this.scene._spawnLightning(this.scene.boss.x, this.scene.boss.y);
+          else this.scene.boss.hit(300);
+        }
         this.scene._showMsg('⚡ TROVÃO TOTAL!', 1500);
         break;
     }
@@ -266,6 +298,77 @@ export class Player {
   _fireBulletsDir(ax, ay) {
     const len = Math.sqrt(ax*ax + ay*ay) || 1;
     this._fireBullets(ax/len, ay/len);
+  }
+
+  // ── Humor ─────────────────────────────────────────────────────
+  _dance() {
+    if (this._dancing) return;
+    this._dancing = true;
+    Audio.dance();
+    this.scene._showMsg('💃 DANÇANDO!', 1700);
+    // Bouncing vertical dance: 8 pequenos pulos rápidos
+    let step = 0;
+    const danceInterval = setInterval(() => {
+      if (step >= 8) { clearInterval(danceInterval); this._dancing = false; return; }
+      this.body.vy = -180;
+      step++;
+    }, 200);
+    // Emote flutuante
+    this.scene.fx?.spawnTextPop?.(this.x, this.y - 50, '💃', 0xff88ff);
+  }
+
+  _taunt() {
+    const taunts = [
+      'É isso aí! 😎',
+      'Vem pra cima!',
+      'Não me acerta! 😜',
+      'Fácil demais! 👊',
+      'Até logo, inimigo! 👋',
+      'Isso é só o começo!',
+      'Quem mandou ser fraco? 💪',
+      'Boa sorte... vai precisar! 🍀',
+    ];
+    const t = taunts[Math.floor(Math.random() * taunts.length)];
+    this.scene._showMsg(t, 2000);
+    Audio.taunt();
+    this.scene.fx?.spawnTextPop?.(this.x, this.y - 50, t, 0xffee00);
+  }
+
+  _checkKonami(input) {
+    if (!this._konamiSeq) this._konamiSeq = [];
+    const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown',
+                  'ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+    const keys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyB','KeyA'];
+    for (const k of keys) {
+      if (input.justDown(k)) {
+        this._konamiSeq.push(k);
+        if (this._konamiSeq.length > code.length) this._konamiSeq.shift();
+        if (this._konamiSeq.join() === code.join()) {
+          this._triggerKonami();
+          this._konamiSeq = [];
+        }
+      }
+    }
+  }
+
+  _triggerKonami() {
+    Audio.konami();
+    this.scene._showMsg('🎉 CÓDIGO KONAMI! MODO INVENCÍVEL 10s!', 4000);
+    this.scene.fx?.spawnTextPop?.(this.x, this.y - 60, '⬆⬆⬇⬇◀▶◀▶BA', 0xffee00);
+    // Invencibilidade por 10 segundos
+    this.invincible = true;
+    // Piscar dourado
+    let tick = 0;
+    const id = setInterval(() => {
+      tick++;
+      this.sprite?.setVisible?.(tick % 2 === 0);
+    }, 80);
+    setTimeout(() => {
+      clearInterval(id);
+      this.sprite?.setVisible?.(true);
+      this.invincible = false;
+      this.scene._showMsg('Invencibilidade acabou!', 1500);
+    }, 10000);
   }
 
   _updateAbilityHUD() {
@@ -285,6 +388,7 @@ export class Player {
     this.scene.updateHUD();
     this.scene.fx?.flashScreen(0xff0000, 0.3, 0.15);
     this.scene.fx?.shake(6, 0.25);
+    Audio.playerHit();
     if (this.health <= 0) {
       this._respawn();
       this.health = this.maxHealth;
