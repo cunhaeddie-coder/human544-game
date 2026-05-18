@@ -184,23 +184,68 @@ PlatformerGame/
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  DEPLOY — WORKFLOW
+  DEPLOY — WORKFLOW COMPLETO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Publicar atualização:
+  INFRAESTRUTURA
+  --------------
+  Plataforma : Railway (railway.app) — plano gratuito (500h/mês)
+  GitHub     : https://github.com/cunhaeddie-coder/human544-game
+  URL pública: https://human544-game-production.up.railway.app
+  Trigger    : push no branch master → deploy automático (~1 min)
+
+  COMO O DEPLOY FUNCIONA
+  ----------------------
+  1. Railway monitora o repositório GitHub (cunhaeddie-coder/human544-game)
+  2. A cada `git push`, Railway inicia um novo build automaticamente
+  3. Build: instala dependências com `npm install` (via package.json)
+  4. Start: executa `npm start` → `node server.js`
+  5. Railway injeta a variável de ambiente PORT automaticamente
+     (server.js usa: const PORT = process.env.PORT || 3000)
+  6. URL pública permanece a mesma após cada redeploy
+
+  PUBLICAR UMA ATUALIZAÇÃO
+  ------------------------
     cd D:\Projetos\PlatformerGame
     git add .
-    git commit -m "descrição"
+    git commit -m "descrição da mudança"
     git push
-  → Railway faz deploy automático em ~1 minuto
+  → Aguardar ~1 minuto → acessar a URL pública para verificar
 
-  Rodar local:
+  PRIMEIRO DEPLOY (se precisar refazer do zero)
+  ----------------------------------------------
+  1. Criar repositório em github.com/new (sem README)
+  2. No terminal:
+       git init
+       git add .
+       git commit -m "inicial"
+       git remote add origin https://github.com/SEU_USUARIO/REPO.git
+       git push -u origin master
+  3. Em railway.app:
+       → New Project → Deploy from GitHub repo
+       → Selecionar o repositório
+       → Deploy Now
+  4. Após o build:
+       → Settings → Networking → Generate Domain
+       → Copiar a URL gerada
+
+  VARIÁVEIS DE AMBIENTE NO RAILWAY (se necessário)
+  -------------------------------------------------
+  Settings → Variables → Add Variable
+  Exemplo: NODE_ENV = production
+
+  RODAR LOCAL (desenvolvimento)
+  -----------------------------
     cd D:\Projetos\PlatformerGame
     node server.js
     → http://localhost:3000
+    → http://192.168.2.7:3000  (rede local)
 
-  Expor externamente (dev):
+  EXPOR EXTERNAMENTE SEM DEPLOY (testes rápidos)
+  -----------------------------------------------
     C:\Users\Edimar'\Downloads\ngrok-v3-stable-windows-amd64\ngrok.exe http 3000
+    → URL temporária gerada automaticamente (muda a cada sessão)
+    → O servidor detecta o ngrok e exibe a URL no terminal
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
