@@ -1,0 +1,217 @@
+================================================================================
+  HUMAN 544 — DOCUMENTO DE CONTEXTO DO PROJETO
+  Gerado em: 2026-04-29
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ESTRUTURA DE PASTAS E ARQUIVOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PlatformerGame/
+├── server.js                         Servidor Node.js (Express + Socket.io)
+├── package.json                      Dependencias: express ^5.2.1, socket.io ^4.8.3
+├── package-lock.json
+├── DOCUMENTO.txt                     Este arquivo
+├── node_modules/
+└── public/
+    ├── index.html                    Entry point HTML (carrega Phaser 3 via CDN)
+    └── src/
+        ├── main.js                   Config do Phaser e instancia do Game
+        ├── Player.js                 Classe Player (movimento, tiro, dano, respawn)
+        ├── Enemy.js                  Classe Enemy base (patrol, hit, morte)
+        ├── Network.js                Cliente Socket.io (envia/recebe posicao)
+        ├── enemies/
+        │   ├── EnemyTypes.js         Definicao visual/comportamento de cada tipo
+        │   ├── BossRobot.js          Boss da Etapa A (fase 5)
+        │   └── BossDragon.js         Boss da Etapa B (fase 10) com fantasmas
+        ├── levels/
+        │   └── LevelConfig.js        Configuracao declarativa das 10 fases
+        ├── scenes/
+        │   ├── BootScene.js          Carrega todos os assets (sprites, tiles, audio)
+        │   ├── MenuScene.js          Tela inicial HUMAN / 544
+        │   ├── ModeScene.js          Selecao de modo (solo / cooperativo / PvP)
+        │   ├── GameScene.js          Loop principal do jogo (fisica, colisoes, update)
+        │   ├── HUDScene.js           Sobreposicao: vida, moedas, mensagens, checkpoint
+        │   ├── ShopScene.js          Loja de upgrades e skins
+        │   ├── MissionsScene.js      Sistema de missoes e recompensas
+        │   ├── PVPScene.js           Modo jogador vs jogador
+        │   └── LeisureScene.js       Modo relaxado / exploracao livre
+        └── systems/
+            ├── SaveSystem.js         Persistencia local (moedas, estrelas, upgrades)
+            └── ShopData.js           Catalogo de itens da loja
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  STACK TECNOLOGICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Frontend : Phaser 3 (via CDN) — motor de jogo 2D com fisica Arcade
+  Backend  : Node.js 24 + Express 5 (servidor HTTP estatico)
+  Realtime : Socket.io 4.8 (sincronizacao multiplayer em tempo real)
+  Storage  : localStorage (SaveSystem — sem banco de dados)
+  Porta    : 3000 (local)  |  npm start  ou  npm run dev (watch mode)
+  Deploy   : nenhum configurado — apenas local por enquanto
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CONTEXTO DO JOGO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Genero    : Platformer 2D de scroll lateral com elementos de shooter
+  Resolucao : 960 x 540 px (FIT + CENTER — escala automatica)
+  Tela      : 540 px de altura fixa; mundo se expande horizontalmente por fase
+
+  ESTRUTURA DAS FASES
+  -------------------
+  10 fases divididas em 2 etapas:
+
+  ETAPA A — "Do chao ao espaco"
+    Fase 1  : Pradaria Verde       (inimigos: slime, bee)
+    Fase 2  : Floresta Densa       (inimigos: mushroom, spider)
+    Fase 3  : Caverna de Cristal   (inimigos: golem, bat)
+    Fase 4  : Montanha Nevada      (inimigos: wolf, yeti)
+    Fase 5  : Plataforma Espacial  (inimigos: drone, shield_bot | BOSS: Robot)
+
+  ETAPA B — "Descendo as trevas"
+    Fase 6  : Floresta Amaldioada  (inimigos: shadow, witch)
+    Fase 7  : Pantano Toxico       (inimigos: toad, croc)
+    Fase 8  : Caverna Vulcanica    (inimigos: fire_slime, fire_bat)
+    Fase 9  : Abismo Gelado        (inimigos: ice_golem, frost_wolf)
+    Fase 10 : Covil do Dragao      (inimigos: dragon_guard | BOSS: Dragon)
+
+  MECANICAS DO PLAYER
+  -------------------
+  Movimento  : A/D ou setas (velocidade base 180px/s + bonus de upgrade)
+  Pulo       : W ou seta cima (altura ~80-104px dependendo da gravidade da fase)
+  Escada     : zona estatica — perto da escada desativa gravidade, W/S sobem/descem
+  Tiro       : ESPACO — cooldown 360ms, 4 armas desbloqueaveis na loja:
+               - default  : 1 projétil na direcao olhada
+               - double   : 2 projéteis paralelos
+               - spread   : 3 projéteis em leque (30 graus)
+               - laser    : 1 projétil grande, escala 3x, cor ciano
+               - rocket   : projétil lento e grande, escala 1.8x, laranja
+  Mira       : 8 direcoes (diagonais inclusas via setas de direcao)
+  Vida       : 3 corações base + 1 por upgrade "extra_heart" (max upgrade loja)
+  Invulnera. : 1.6s apos tomar dano (pisca alpha)
+  Checkpoint : toca no objeto para salvar posicao de respawn da fase atual
+  Skin       : tint aplicado no sprite conforme item ativo no SaveSystem
+
+  SISTEMA DE PROGRESSAO
+  ---------------------
+  Moedas     : +5 por moeda coletada, +50 por estrela, usadas na loja
+  Estrelas   : 3 por fase (30 total), salvas permanentemente no SaveSystem
+  Loja       : upgrades permanentes (vida, velocidade, pulo), armas, skins
+  Fases      : desbloqueadas sequencialmente via SaveSystem.unlockPhase()
+
+  MULTIPLAYER
+  -----------
+  Protocolo  : Socket.io rooms — todos jogam no mesmo "sala" global
+  Eventos    : move (posicao x,y,flip,anim), checkpoint (fase+id), disconnect
+  Render     : outros jogadores aparecem como retangulos vermelhos 28x42
+  Estado     : server.js mantem objeto players{} em memoria (reinicia ao restart)
+
+  BOSSES
+  ------
+  BossRobot  (fase 5) : fica no chao, tem HP, atira projeteis no player
+  BossDragon (fase 10): voa, invoca fantasmas (ghosts) que o player deve destruir;
+                        saida da fase fica bloqueada ate o boss ser derrotado
+
+  FISICA
+  ------
+  Engine     : Phaser Arcade Physics
+  Gravidade  : varia por fase (380 a 620) para calibrar altura de pulo
+  Colisoes   : ground (estatico), platforms (one-way — passa de baixo), spikes (dano)
+  Mundo      : setBounds por fase (worldWidth x 540); camera segue player com lerp 0.12
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ANALISE: TRANSFORMAR EM 3D — POSSIBILIDADE E SUGESTOES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  VIABILIDADE GERAL
+  -----------------
+  Transformar o HUMAN 544 em 3D e totalmente viavel, mas exige troca de motor.
+  Phaser 3 e exclusivamente 2D. Para 3D as opcoes reais sao:
+
+  OPCAO 1 — Three.js (2.5D / pseudo-3D)  [RECOMENDADO PARA CONTINUIDADE]
+  -----------------------------------------------------------------------
+  O jogo manteria a jogabilidade 2D (scroll lateral) mas os visuais seriam
+  em 3D — personagens e cenarios com modelos 3D, camera ortografica ou levemente
+  inclinada. Estilo: Little Big Planet, Ori, Ori and the Blind Forest.
+
+  Vantagens:
+  - Menor reescrita: logica de fisica, fases e saves quase intactos
+  - Curva de aprendizado moderada (Three.js e bem documentado)
+  - Efeitos visivelmente melhores: sombras, profundidade, luzes dinamicas
+  - Multiplayer via Socket.io continua igual
+
+  Desvantagens:
+  - Precisaria recriar toda a fisica (Three.js nao tem fisica arcade nativa)
+    → solucao: usar Cannon.js ou Rapier.js junto com Three.js
+  - Assets 2D atuais (sprites) precisariam ser substituidos por modelos 3D (.glb)
+  - Mais complexidade de camera e colisao
+
+  OPCAO 2 — Babylon.js  [MELHOR SUPORTE A FISICA 3D NATIVO]
+  ----------------------------------------------------------
+  Motor 3D completo com fisica integrada (Havok), muito mais robusto para
+  plataformer 3D real (movimento em X, Y e Z como Mario 64 / Crash Bandicoot).
+
+  Vantagens:
+  - Fisica 3D nativa com Havok (gratuito)
+  - Suporte completo a modelos GLTF/GLB, animacoes, sombras, PBR
+  - Playground online para prototipar rapido
+  - Multiplayer via Socket.io continua igual
+
+  Desvantagens:
+  - Reescrita quase total de GameScene, Player e LevelConfig
+  - LevelConfig precisaria mudar de coordenadas 2D para posicoes 3D (x,y,z)
+  - Curva de aprendizado maior
+
+  OPCAO 3 — Three.js + Rapier (fisica) + manter logica 2D
+  --------------------------------------------------------
+  Hibrido: usa Three.js para renderizar em 3D mas a fisica continua sendo
+  calculada em 2D (x,y). O eixo Z e apenas visual (parallax de fundo, efeitos).
+  Seria a migracao mais rapida e com menor risco de quebrar o que ja funciona.
+
+  SUGESTOES ANTES DE QUALQUER ALTERACAO
+  ---------------------------------------
+  1. DECIDIR O ESTILO: 2.5D (scroll lateral com visual 3D) ou 3D completo
+     (movimento livre em X/Y/Z). Sao arquiteturas muito diferentes.
+
+  2. PROTOTIPAR PRIMEIRO: criar uma cena isolada em Three.js ou Babylon.js
+     com apenas o player se movendo numa plataforma antes de migrar tudo.
+
+  3. SEPARAR O QUE PODE REAPROVEITAR:
+     - server.js, Network.js, SaveSystem.js, ShopData.js → 100% reutilizaveis
+     - LevelConfig.js → reutilizavel com adaptacao de coordenadas
+     - Player.js logica de input → reutilizavel, apenas trocar Phaser por Three
+     - GameScene.js → reescrita necessaria
+     - Todos os sprites 2D → substituir por modelos 3D .glb
+
+  4. ASSETS 3D GRATUITOS PARA COMECAR:
+     - Kenney.nl (kenney.nl/assets) — pacotes 3D CC0 (sem creditos necessarios)
+     - Quaternius (quaternius.com) — personagens e inimigos animados gratuitos
+     - Sketchfab (sketchfab.com/features/free-3d-models) — busca por CC license
+
+  5. ORDEM SUGERIDA DE MIGRACAO (se decidir ir para 3D):
+     Passo 1 — Instalar Three.js + Rapier e criar cena vazia com plataforma
+     Passo 2 — Migrar Player (input + fisica de pulo/corrida)
+     Passo 3 — Migrar LevelConfig para coordenadas 3D (fase 1 apenas)
+     Passo 4 — Migrar inimigos basicos (slime/bee)
+     Passo 5 — Migrar HUD, SaveSystem, Shop
+     Passo 6 — Migrar multiplayer (praticamente sem mudanca)
+     Passo 7 — Migrar bosses
+     Passo 8 — Migrar as demais 9 fases
+
+  RECOMENDACAO FINAL
+  ------------------
+  Para preservar o maximo do trabalho ja feito e entregar resultado rapido,
+  recomendo OPCAO 3 (Three.js com fisica 2D mantida, profundidade apenas visual).
+  Depois que o jogo estiver rodando visualmente em 3D, a transicao para
+  fisica 3D completa (Babylon ou Three + Rapier) fica muito mais facil.
+
+
+================================================================================
+  FIM DO DOCUMENTO
+================================================================================
