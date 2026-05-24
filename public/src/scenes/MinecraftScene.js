@@ -6,6 +6,7 @@ import { Physics2D, Body } from '../engine/Physics2D.js';
 import { CharacterSprite } from '../CharacterSprite.js';
 import { getNetwork } from '../Network.js';
 import { GW, GH } from '../engine/ThreeEngine.js';
+import { TouchControls } from '../engine/TouchControls.js';
 
 // ── Blocos ──────────────────────────────────────────────────────
 const B = 32; // pixels per block
@@ -137,9 +138,10 @@ export class MinecraftScene {
     this._remPlayers = {};
     this._netCbs     = {};
     // Mobile
-    this._isMobile    = false;
-    this._mcActionsEl = null;
-    this._touchTargetH= null;
+    this._isMobile     = false;
+    this._mcActionsEl  = null;
+    this._touchTargetH = null;
+    this._touchControls= null;
   }
 
   // ── Create ─────────────────────────────────────────────────────
@@ -319,10 +321,11 @@ export class MinecraftScene {
     if (!( ('ontouchstart' in window) || navigator.maxTouchPoints > 0 )) return;
     this._isMobile = true;
 
-    // Show the D-pad (movement + jump via ▲ → KeyW)
+    // Instancia TouchControls — isso binda os eventos de toque no D-pad (tc-left/right/up/down)
+    this._touchControls = new TouchControls(this.inp);
+    // show() exibe o container; tc-actions fica oculto pois substituímos com botões próprios
     const tc = document.getElementById('touch-controls');
     if (tc) tc.style.display = 'flex';
-    // Hide game-specific buttons (shoot/ability/jump) — we replace them
     const tcA = document.getElementById('tc-actions');
     if (tcA) tcA.style.display = 'none';
 
@@ -690,6 +693,7 @@ export class MinecraftScene {
 
     // Mobile cleanup
     if (this._isMobile) {
+      this._touchControls?.destroy();   // libera listeners do D-pad
       const tc = document.getElementById('touch-controls');
       if (tc) tc.style.display = 'none';
       const tcA = document.getElementById('tc-actions');
