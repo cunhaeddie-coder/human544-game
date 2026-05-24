@@ -27,12 +27,16 @@ const BLOCKS = {
   12: { name:'Planks',   color:0xc8a050, hardness:0.7 },
   13: { name:'Vidro',    color:0x88ccff, hardness:0.4 },
   14: { name:'Tocha',    color:0xff8800, hardness:0.1, light:true },
+  15: { name:'Lã',      color:0xeeeeee, hardness:0.1 },
+  16: { name:'Cama',    color:0xff5566, hardness:0.3 },
+  17: { name:'Osso',    color:0xddddcc, hardness:0.1 },
 };
 
 const RECIPES = [
-  { in:{ '5':4  }, out:{ id:12, qty:4 }, name:'Planks (4x Madeira)' },
-  { in:{ '3':4  }, out:{ id:14, qty:4 }, name:'Tocha (4x Pedra)' },
-  { in:{ '11':4 }, out:{ id:12, qty:4 }, name:'Planks (4x Tronco)' },
+  { in:{ '5':4  },        out:{ id:12, qty:4 }, name:'Planks (4x Madeira)' },
+  { in:{ '3':4  },        out:{ id:14, qty:4 }, name:'Tocha (4x Pedra)' },
+  { in:{ '11':4 },        out:{ id:12, qty:4 }, name:'Planks (4x Tronco)' },
+  { in:{ '15':3, '12':3}, out:{ id:16, qty:1 }, name:'Cama (3x Lã + 3x Planks)' },
 ];
 
 const WW = 120, WH = 72;
@@ -62,6 +66,7 @@ function generateWorld(rnd = Math.random) {
   const set = (x, y, v) => { if (x >= 0 && x < WW && y >= 0 && y < WH) w[y*WW+x] = v; };
   const get = (x, y)    => (x<0||x>=WW||y<0||y>=WH) ? 0 : w[y*WW+x];
 
+  // Height map
   const hmap = [];
   let h = SKY_H + 3;
   for (let x = 0; x < WW; x++) {
@@ -70,6 +75,7 @@ function generateWorld(rnd = Math.random) {
     hmap[x] = Math.floor(h);
   }
 
+  // Layer fill — coal now only below depth 8 (was 3)
   for (let x = 0; x < WW; x++) {
     const surf = hmap[x];
     for (let y = 0; y < WH; y++) {
@@ -81,18 +87,45 @@ function generateWorld(rnd = Math.random) {
       if      (depth > 30 && r < 0.016) w[y*WW+x] = 10;
       else if (depth > 16 && r < 0.028) w[y*WW+x] = 9;
       else if (depth > 7  && r < 0.042) w[y*WW+x] = 8;
-      else if (depth > 3  && r < 0.052) w[y*WW+x] = 7;
+      else if (depth > 8  && r < 0.048) w[y*WW+x] = 7; // coal: depth>8, was depth>3
       else w[y*WW+x] = 3;
     }
   }
 
-  for (let x = 8; x < WW - 8; x += 12 + Math.floor(rnd()*14)) {
-    const surf = hmap[x];
-    for (let dx = -2; dx <= 2; dx++)
-      for (let dy = 0; dy <= 3; dy++)
-        if (get(x+dx, surf+dy)) set(x+dx, surf+dy, 4);
+  // Sand biomes — continuous horizontal strips instead of isolated patches
+  let sandLeft = 0;
+  for (let x = 4; x < WW - 4; x++) {
+    if (sandLeft <= 0) {
+      if (rnd() < 0.065) sandLeft = 7 + Math.floor(rnd() * 16);
+    }
+    if (sandLeft > 0) {
+      sandLeft--;
+      const surf = hmap[x];
+      for (let dy = 0; dy <= 3; dy++) set(x, surf + dy, 4); // replace grass+dirt → sand
+    } else {
+      rnd(); // keep RNG sequence stable
+    }
   }
 
+  // Caves — random-walk tunnels underground
+  for (let c = 0; c < 8; c++) {
+    let cx = 5 + Math.floor(rnd() * (WW - 10));
+    let cy = hmap[Math.min(WW-1, Math.max(0, cx))] + 6 + Math.floor(rnd() * 14);
+    const cLen = 28 + Math.floor(rnd() * 52);
+    let angle  = rnd() * Math.PI * 2;
+    for (let s = 0; s < cLen; s++) {
+      angle += (rnd() - 0.5) * 1.1;
+      cx += Math.cos(angle) * 1.5;
+      cy += Math.sin(angle) * 0.65;
+      const ix = Math.round(cx), iy = Math.round(cy);
+      const minSurf = hmap[Math.min(WW-1, Math.max(0, ix))];
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++)
+          if (iy + dy > minSurf + 2) set(ix + dx, iy + dy, 0);
+    }
+  }
+
+  // Trees (only on grass, not sand)
   for (let x = 3; x < WW - 3; x++) {
     if (get(x, hmap[x]) === 1 && rnd() < 0.08) {
       const th = 3 + Math.floor(rnd() * 3);
@@ -105,6 +138,86 @@ function generateWorld(rnd = Math.random) {
   }
 
   return w;
+}
+
+// ── NPC pixel-art textures ────────────────────────────────────────
+const _NPC_TEX = {};
+function _npcTexture(type, variant) {
+  const key = `${type}_${variant}`;
+  if (_NPC_TEX[key]) return _NPC_TEX[key];
+  const cv = document.createElement('canvas');
+  const ctx = cv.getContext('2d');
+
+  if (type === 'sheep') {
+    cv.width = 64; cv.height = 48;
+    // Body
+    ctx.fillStyle = variant ? '#cc9966' : '#f0f0f0'; // sheared or wooled
+    ctx.fillRect(16, 16, 40, 22);
+    // Head
+    ctx.fillStyle = variant ? '#bb8855' : '#e0e0e0';
+    ctx.fillRect(4, 8, 20, 18);
+    // Wool bumps on body (only when wooled)
+    if (!variant) {
+      ctx.fillStyle = '#ffffff';
+      for (let bx = 18; bx < 54; bx += 9) ctx.fillRect(bx, 12, 8, 8);
+    }
+    // Legs
+    ctx.fillStyle = '#998877';
+    [[18,38],[28,38],[38,38],[48,38]].forEach(([x,y]) => ctx.fillRect(x,y,8,10));
+    // Eye
+    ctx.fillStyle = '#222';
+    ctx.fillRect(7, 12, 4, 4);
+  } else if (type === 'zombie') {
+    cv.width = 40; cv.height = 64;
+    // Head
+    ctx.fillStyle = '#66cc66';
+    ctx.fillRect(10, 0, 20, 18);
+    // Body
+    ctx.fillStyle = '#335533';
+    ctx.fillRect(8, 18, 24, 22);
+    // Arms (raised forward)
+    ctx.fillStyle = '#66cc66';
+    ctx.fillRect(0, 12, 8, 18);
+    ctx.fillRect(32, 12, 8, 18);
+    // Legs
+    ctx.fillStyle = '#223322';
+    ctx.fillRect(10, 40, 9, 24);
+    ctx.fillRect(22, 40, 9, 24);
+    // Eyes
+    ctx.fillStyle = '#ff2200';
+    ctx.fillRect(13, 5, 5, 5);
+    ctx.fillRect(23, 5, 5, 5);
+  } else if (type === 'wolf') {
+    cv.width = 64; cv.height = 48;
+    // Body
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(10, 14, 40, 20);
+    // Head
+    ctx.fillStyle = '#777777';
+    ctx.fillRect(44, 8, 18, 18);
+    // Snout
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(58, 14, 6, 8);
+    // Tail
+    ctx.fillStyle = '#999999';
+    ctx.fillRect(2, 6, 12, 12);
+    // Legs
+    ctx.fillStyle = '#777777';
+    [[14,34],[24,34],[36,34],[46,34]].forEach(([x,y]) => ctx.fillRect(x,y,8,14));
+    // Eye
+    ctx.fillStyle = variant ? '#66aaff' : '#ffaa00';
+    ctx.fillRect(50, 11, 6, 6);
+    // Collar (tamed)
+    if (variant) {
+      ctx.fillStyle = '#ff4444';
+      ctx.fillRect(44, 22, 16, 4);
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.magFilter = THREE.NearestFilter;
+  _NPC_TEX[key] = tex;
+  return tex;
 }
 
 // ── Scene ─────────────────────────────────────────────────────────
@@ -142,6 +255,18 @@ export class MinecraftScene {
     this._mcActionsEl  = null;
     this._touchTargetH = null;
     this._touchControls= null;
+    // NPCs
+    this._npcs        = [];
+    this._playerHp    = 10;
+    this._playerMaxHp = 10;
+    this._hitCooldown = 0;
+    this._hpEl        = null;
+    this._clockEl     = null;
+    this._skyMesh     = null;
+    this._dayT        = 0;
+    this._isNight     = false;
+    // Decorations
+    this._decorMeshes = [];
   }
 
   // ── Create ─────────────────────────────────────────────────────
@@ -160,7 +285,7 @@ export class MinecraftScene {
     this.physics.setWorldBounds(0, WW * B, 9999);
     E.setWorldBounds(0, WW * B);
 
-    E.plane(WW * B + 400, SKY_H * B * 2, 0x5599ee, (WW*B)/2, (SKY_H*B)/2, -300);
+    this._skyMesh = E.plane(WW * B + 400, SKY_H * B * 2, 0x5599ee, (WW*B)/2, (SKY_H*B)/2, -300);
 
     const spawnX = Math.floor(WW / 2);
     let spawnY = 0;
@@ -177,6 +302,8 @@ export class MinecraftScene {
     this._player = { body: pbody };
 
     this._buildWorld();
+    this._buildDecorations();
+    this._spawnNPCs();
     this._buildHUD();
     this._setupMouse();
     this._setupMobileControls();
@@ -360,6 +487,14 @@ export class MinecraftScene {
       requestAnimationFrame(() => this.inp.injectKey('KeyF', false));
     }, { passive:false });
 
+    // 🤝 INTERACT — tap to interact with NPC (E key)
+    const interactBtn = mkBtn('🤝', 'rgba(80,40,80,0.88)', 'rgba(180,80,180,0.9)', '#dd88ff');
+    interactBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      this.inp.injectKey('KeyE', true);
+      requestAnimationFrame(() => this.inp.injectKey('KeyE', false));
+    }, { passive:false });
+
     // ⚒ CRAFT — tap to open/close crafting menu
     const craftBtn = mkBtn('⚒', 'rgba(20,40,80,0.88)', 'rgba(40,110,220,0.9)', '#66aaff');
     craftBtn.addEventListener('touchstart', e => {
@@ -376,8 +511,8 @@ export class MinecraftScene {
     jumpBtn.addEventListener('touchend',    e => { e.preventDefault(); this.inp.injectKey('Space', false); }, { passive:false });
     jumpBtn.addEventListener('touchcancel', e => { e.preventDefault(); this.inp.injectKey('Space', false); }, { passive:false });
 
-    // Stack: craft (top) → place → mine (bottom, most used near thumb)
-    this._mcActionsEl.append(craftBtn, placeBtn, mineBtn, jumpBtn);
+    // Stack: craft (top) → interact → place → mine → jump (bottom)
+    this._mcActionsEl.append(craftBtn, interactBtn, placeBtn, mineBtn, jumpBtn);
     document.body.appendChild(this._mcActionsEl);
 
     // Touch on canvas (outside buttons/D-pad) → update mine/place target
@@ -453,6 +588,359 @@ export class MinecraftScene {
     delete this._remPlayers[id];
   }
 
+  // ── NPCs ───────────────────────────────────────────────────────
+  _spawnNPCs() {
+    const surfaceY = (wx) => {
+      for (let wy = 0; wy < WH; wy++) {
+        if (this._world[wy*WW+wx] !== 0) return wy * B - 22;
+      }
+      return SKY_H * B - 22;
+    };
+    // 5 sheep spread across map surface
+    for (let i = 0; i < 5; i++) {
+      const wx = 10 + Math.floor(i * (WW - 20) / 4);
+      this._makeNpc('sheep', wx * B + B/2, surfaceY(wx));
+    }
+    // 2 wolves
+    for (let i = 0; i < 2; i++) {
+      const wx = 25 + i * 55;
+      this._makeNpc('wolf', wx * B + B/2, surfaceY(wx));
+    }
+  }
+
+  _makeNpc(type, x, y) {
+    const cfg = {
+      sheep:  { w:24, h:20, hp:4,  maxHp:4  },
+      zombie: { w:16, h:32, hp:6,  maxHp:6  },
+      wolf:   { w:24, h:20, hp:8,  maxHp:8  },
+    }[type];
+    const npc = {
+      type, x, y, vx:0, vy:0, ...cfg,
+      dir:1, onGround:false,
+      wooled:   type === 'sheep',
+      regrowT:  0,
+      tamed:    false,
+      boneCount:0,
+      attackCd: 0,
+      wanderT:  0,
+      wanderDir:1,
+      sprite: null,
+    };
+    npc.sprite = this._makeNpcSprite(type, npc);
+    this._npcs.push(npc);
+    return npc;
+  }
+
+  _makeNpcSprite(type, npc) {
+    const variant = (type === 'sheep' && !npc.wooled) ? 1 : (type === 'wolf' && npc.tamed) ? 1 : 0;
+    const tex = _npcTexture(type, variant);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    const sp  = new THREE.Sprite(mat);
+    const sw  = type === 'zombie' ? 28 : 50;
+    const sh  = type === 'zombie' ? 50 : 38;
+    sp.scale.set(sw, sh, 1);
+    sp.position.set(npc.x, npc.y, 1);
+    this.e.scene.add(sp);
+    return sp;
+  }
+
+  _refreshNpcSprite(npc) {
+    if (npc.sprite) { this.e.scene.remove(npc.sprite); npc.sprite.material.dispose(); }
+    npc.sprite = this._makeNpcSprite(npc.type, npc);
+  }
+
+  _removeNpc(npc) {
+    if (npc.sprite) { this.e.scene.remove(npc.sprite); npc.sprite.material.dispose(); }
+    const idx = this._npcs.indexOf(npc);
+    if (idx >= 0) this._npcs.splice(idx, 1);
+  }
+
+  _resolveNpcGround(npc) {
+    const left  = Math.floor((npc.x - npc.w/2) / B);
+    const right  = Math.floor((npc.x + npc.w/2 - 1) / B);
+    const bot    = Math.floor((npc.y + npc.h/2) / B);
+    const top    = Math.floor((npc.y - npc.h/2) / B);
+    npc.onGround = false;
+    // Ground
+    if (npc.vy >= 0) {
+      for (let tx = left; tx <= right; tx++) {
+        if (bot >= 0 && bot < WH && tx >= 0 && tx < WW && this._world[bot*WW+tx] !== 0) {
+          npc.y = bot * B - npc.h/2;
+          npc.vy = 0; npc.onGround = true; break;
+        }
+      }
+    }
+    // Ceiling
+    if (npc.vy < 0) {
+      for (let tx = left; tx <= right; tx++) {
+        if (top >= 0 && top < WH && tx >= 0 && tx < WW && this._world[top*WW+tx] !== 0) {
+          npc.y = (top + 1) * B + npc.h/2; npc.vy = 0; break;
+        }
+      }
+    }
+    // Wall → reverse and randomise wanderDir
+    const sideX = npc.vx > 0 ? right : left;
+    if (npc.vx !== 0 && sideX >= 0 && sideX < WW) {
+      for (let ty = top; ty <= bot; ty++) {
+        if (ty >= 0 && ty < WH && this._world[ty*WW+sideX] !== 0) {
+          npc.vx = -npc.vx; npc.wanderDir = -npc.wanderDir; break;
+        }
+      }
+    }
+    // World edges
+    const half = npc.w / 2;
+    if (npc.x < half)       { npc.x = half;       npc.vx = Math.abs(npc.vx);  npc.wanderDir =  1; }
+    if (npc.x > WW*B - half){ npc.x = WW*B - half; npc.vx = -Math.abs(npc.vx); npc.wanderDir = -1; }
+  }
+
+  _updateNPCs(dt, px, py) {
+    // Day / night cycle — 120s day, 120s night
+    this._dayT += dt;
+    if (this._dayT >= 240) this._dayT = 0;
+    const wasNight = this._isNight;
+    this._isNight  = this._dayT >= 120;
+
+    if (this._isNight && !wasNight) {
+      this._spawnZombies();
+      if (this._skyMesh) this._skyMesh.material.color.setHex(0x08082a);
+      this._msg('🌙 Noite — cuidado com os zumbis!', 3000);
+    } else if (!this._isNight && wasNight) {
+      if (this._skyMesh) this._skyMesh.material.color.setHex(0x5599ee);
+      this._msg('☀️ Amanheceu!', 2000);
+      for (let i = this._npcs.length - 1; i >= 0; i--) {
+        if (this._npcs[i].type === 'zombie') this._removeNpc(this._npcs[i]);
+      }
+    }
+
+    this._hitCooldown = Math.max(0, this._hitCooldown - dt);
+    this._updateClock();
+
+    for (let i = this._npcs.length - 1; i >= 0; i--) {
+      const npc = this._npcs[i];
+      if (npc.hp <= 0) { this._onNpcDeath(npc); continue; }
+
+      npc.vy += 650 * dt;
+      npc.attackCd = Math.max(0, npc.attackCd - dt);
+
+      if (npc.type === 'sheep')  this._aiSheep(npc, dt, px, py);
+      else if (npc.type === 'zombie') this._aiZombie(npc, dt, px, py);
+      else if (npc.type === 'wolf')   this._aiWolf(npc, dt, px, py);
+
+      npc.x += npc.vx * dt;
+      npc.y += npc.vy * dt;
+      this._resolveNpcGround(npc);
+
+      if (npc.y > WH * B + 100) { this._removeNpc(npc); continue; }
+
+      // Sprite mirror + position
+      const sw = Math.abs(npc.sprite.scale.x);
+      npc.sprite.scale.x = sw * (npc.dir < 0 ? -1 : 1);
+      npc.sprite.position.set(npc.x, npc.y, 1);
+    }
+  }
+
+  _aiSheep(npc, dt, px, py) {
+    const nearZ = this._npcs.find(z =>
+      z.type === 'zombie' && Math.abs(z.x - npc.x) < 200 && Math.abs(z.y - npc.y) < 120);
+    if (nearZ) {
+      npc.dir = nearZ.x < npc.x ? 1 : -1;
+      npc.vx  = npc.dir * 120;
+    } else {
+      npc.wanderT += dt;
+      if (npc.wanderT > 2 + Math.random() * 3) {
+        npc.wanderT = 0;
+        npc.wanderDir = Math.random() < 0.5 ? -1 : 1;
+        npc.vx = Math.random() < 0.3 ? 0 : npc.wanderDir * 55;
+      }
+      if (npc.vx !== 0) npc.dir = npc.vx < 0 ? -1 : 1;
+    }
+    if (!npc.wooled) {
+      npc.regrowT += dt;
+      if (npc.regrowT >= 15) { npc.wooled = true; npc.regrowT = 0; this._refreshNpcSprite(npc); }
+    }
+  }
+
+  _aiZombie(npc, dt, px, py) {
+    const dx = px - npc.x, dy = py - npc.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 420) {
+      npc.dir = dx > 0 ? 1 : -1;
+      npc.vx  = npc.dir * 80;
+      // Jump over walls
+      if (npc.onGround) {
+        const frontX = Math.floor((npc.x + npc.dir * (npc.w/2 + 4)) / B);
+        const midY   = Math.floor(npc.y / B);
+        if (frontX >= 0 && frontX < WW && midY >= 0 && midY < WH && this._world[midY*WW+frontX] !== 0) {
+          npc.vy = -310;
+        }
+      }
+      // Damage player
+      if (dist < 30 && npc.attackCd <= 0) { this._damagePlayer(1); npc.attackCd = 1.5; }
+      // Damage tamed wolves that are nearby
+      this._npcs.forEach(w => {
+        if (w.type === 'wolf' && w.tamed && Math.abs(w.x - npc.x) < 30 && npc.attackCd <= 0) {
+          w.hp -= 1; npc.attackCd = 1.5;
+        }
+      });
+    } else {
+      npc.wanderT += dt;
+      if (npc.wanderT > 2) {
+        npc.wanderT = 0; npc.wanderDir = -npc.wanderDir;
+        npc.vx = npc.wanderDir * 50;
+      }
+      npc.dir = npc.vx < 0 ? -1 : 1;
+    }
+  }
+
+  _aiWolf(npc, dt, px, py) {
+    const dx = px - npc.x, dist = Math.hypot(px - npc.x, py - npc.y);
+    if (!npc.tamed) {
+      if (dist < 160) {
+        npc.dir = px < npc.x ? 1 : -1;
+        npc.vx  = npc.dir * 110;
+      } else {
+        npc.wanderT += dt;
+        if (npc.wanderT > 3 + Math.random() * 2) {
+          npc.wanderT = 0; npc.wanderDir = Math.random() < 0.5 ? -1 : 1;
+          npc.vx = Math.random() < 0.35 ? 0 : npc.wanderDir * 55;
+        }
+        if (npc.vx !== 0) npc.dir = npc.vx < 0 ? -1 : 1;
+      }
+    } else {
+      const target = this._npcs.find(z =>
+        z.type === 'zombie' && Math.abs(z.x - npc.x) < 320 && Math.abs(z.y - npc.y) < 120);
+      if (target) {
+        npc.dir = target.x > npc.x ? 1 : -1;
+        npc.vx  = npc.dir * 150;
+        if (Math.abs(target.x - npc.x) < 30 && npc.attackCd <= 0) {
+          target.hp -= 2; npc.attackCd = 0.9;
+        }
+      } else if (dist > 220) {
+        npc.dir = dx > 0 ? 1 : -1;
+        npc.vx  = npc.dir * 140;
+      } else {
+        npc.vx = 0;
+        npc.dir = dx > 0 ? 1 : -1;
+      }
+    }
+  }
+
+  _onNpcDeath(npc) {
+    if (npc.type === 'sheep')  this._addItem(15, npc.wooled ? 2 : 1);
+    if (npc.type === 'zombie') this._addItem(17, 1);
+    this._removeNpc(npc);
+  }
+
+  _spawnZombies() {
+    const surfY = (wx) => {
+      for (let wy = 0; wy < WH; wy++) if (this._world[wy*WW+wx] !== 0) return wy * B - 22;
+      return SKY_H * B - 22;
+    };
+    for (let i = 0; i < 3; i++) {
+      const wx = i < 2 ? 1 + i : WW - 2;
+      this._makeNpc('zombie', wx * B + B/2, surfY(wx));
+    }
+  }
+
+  _interactNPC(px, py) {
+    const slot = this._inv[this._hotbar];
+    for (const npc of this._npcs) {
+      if (Math.abs(npc.x - px) > 70 || Math.abs(npc.y - py) > 60) continue;
+      if (npc.type === 'sheep' && npc.wooled) {
+        npc.wooled = false; npc.regrowT = 0;
+        this._refreshNpcSprite(npc);
+        this._addItem(15, 2);
+        this._msg('Ovelha tosquiada! +2 Lã');
+        return;
+      }
+      if (npc.type === 'wolf' && !npc.tamed && slot.id === 17 && slot.qty > 0) {
+        this._removeItem(17, 1);
+        npc.boneCount++;
+        if (npc.boneCount >= 3) {
+          npc.tamed = true;
+          this._refreshNpcSprite(npc);
+          this._msg('🐺 Lobo domado! Ele vai te proteger!');
+        } else {
+          this._msg(`Lobo: ${npc.boneCount}/3 ossos para domar`);
+        }
+        return;
+      }
+    }
+  }
+
+  _damagePlayer(amt) {
+    if (this._hitCooldown > 0) return;
+    this._playerHp = Math.max(0, this._playerHp - amt);
+    this._hitCooldown = 0.8;
+    this._updateHP();
+    if (this._playerHp <= 0) {
+      this._msg('💀 Você morreu! Ressurgindo...', 3000);
+      const b = this._player.body;
+      setTimeout(() => {
+        if (!this._player) return;
+        b.x = Math.floor(WW/2) * B; b.y = SKY_H * B - 60;
+        b.vx = 0; b.vy = 0;
+        this._playerHp = this._playerMaxHp;
+        this._updateHP();
+      }, 2000);
+    }
+  }
+
+  _updateHP() {
+    if (!this._hpEl) return;
+    this._hpEl.innerHTML = Array.from({ length: this._playerMaxHp }, (_, i) =>
+      `<span style="color:${i < this._playerHp ? '#ff4444' : '#444444'};font-size:15px">❤</span>`
+    ).join('');
+  }
+
+  // ── Surface decorations (visual only, no collision) ────────────
+  _buildDecorations() {
+    for (let wx = 0; wx < WW; wx++) {
+      // Find surface grass block
+      let surf = -1;
+      for (let wy = 0; wy < WH; wy++) {
+        if (this._world[wy*WW+wx] !== 0) { surf = wy; break; }
+      }
+      if (surf < 0 || this._world[surf*WW+wx] !== 1) continue; // only on grass
+      if (Math.random() > 0.22) continue;
+
+      const gx = wx * B + B/2;
+      const gy = surf * B; // top of grass block in game coords
+      const r  = Math.random();
+
+      if (r < 0.35) {
+        // Flower: stem + head
+        const headCol = Math.random() < 0.5 ? 0xff4499 : (Math.random() < 0.5 ? 0xffdd00 : 0xff7700);
+        this._decorMeshes.push(
+          this.e.box(3, 12, 3, 0x22aa22, gx, gy - 6, 2),
+          this.e.box(11, 9, 3, headCol,  gx, gy - 15, 2)
+        );
+      } else if (r < 0.70) {
+        // Grass tufts
+        const col = 0x33bb33;
+        this._decorMeshes.push(
+          this.e.box(2, 13, 3, col, gx - 5, gy - 7, 2),
+          this.e.box(2, 16, 3, col, gx,     gy - 8, 2),
+          this.e.box(2, 13, 3, col, gx + 5, gy - 7, 2)
+        );
+      } else {
+        // Mushroom: stem + cap
+        this._decorMeshes.push(
+          this.e.box(5, 9,  3, 0xddccaa, gx, gy - 5,  2),
+          this.e.box(14, 7, 3, 0xcc3322, gx, gy - 13, 2)
+        );
+      }
+    }
+  }
+
+  _updateClock() {
+    if (!this._clockEl) return;
+    const timeLeft = this._isNight
+      ? Math.ceil(240 - this._dayT)
+      : Math.ceil(120 - this._dayT);
+    this._clockEl.textContent = this._isNight ? `🌙 ${timeLeft}s` : `☀️ ${timeLeft}s`;
+  }
+
   // ── HUD ────────────────────────────────────────────────────────
   _buildHUD() {
     this._hudEl = document.createElement('div');
@@ -480,8 +968,20 @@ export class MinecraftScene {
     document.body.appendChild(this._craftEl);
     window._mc_craft = (i) => { if (RECIPES[i]) this._craft(RECIPES[i]); };
 
+    this._hpEl = document.createElement('div');
+    this._hpEl.style.cssText = 'position:fixed;top:8px;left:8px;z-index:502;pointer-events:none;' +
+      'background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:6px;';
+    document.body.appendChild(this._hpEl);
+
+    this._clockEl = document.createElement('div');
+    this._clockEl.style.cssText = 'position:fixed;top:8px;right:8px;z-index:502;pointer-events:none;' +
+      'background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;font-family:monospace;font-size:15px;';
+    document.body.appendChild(this._clockEl);
+
     this._updateHUD();
-    this._msg('Clique esq=minerar  F=colocar  R=crafting  1-9=slot  Z=mine(mobile)  ESC=sair');
+    this._updateHP();
+    this._updateClock();
+    this._msg('Clique esq=minerar  F=colocar  E=interagir  R=crafting  1-9=slot  ESC=sair');
   }
 
   _updateHUD() {
@@ -635,8 +1135,8 @@ export class MinecraftScene {
       }
     }
 
-    // ── Place block — F, E, or right-click ──────────────────────
-    if ((inp.justDown('KeyF') || inp.justDown('KeyE')) && this._placeCd <= 0) {
+    // ── Place block — F key ──────────────────────────────────────
+    if (inp.justDown('KeyF') && this._placeCd <= 0) {
       let placeWx, placeWy;
       if (this._mouseTarget) {
         placeWx = this._mouseTarget.wx;
@@ -657,6 +1157,12 @@ export class MinecraftScene {
         }
       }
     }
+
+    // Interact with NPC (E key)
+    if (inp.justDown('KeyE')) this._interactNPC(cx, cy);
+
+    // NPC update
+    this._updateNPCs(dt, cx, cy);
 
     // Online position sync (throttled inside sendMove)
     if (this._net) {
@@ -708,15 +1214,31 @@ export class MinecraftScene {
       this.inp.injectKey('Space', false);
       this.inp.injectKey('KeyF',  false);
       this.inp.injectKey('KeyR',  false);
+      this.inp.injectKey('KeyE',  false);
     }
+
+    // NPCs
+    for (const npc of this._npcs) {
+      if (npc.sprite) { this.e.scene.remove(npc.sprite); npc.sprite.material.dispose(); }
+    }
+    this._npcs = [];
+
+    // Decorations
+    this._decorMeshes.forEach(m => this.e.remove(m));
+    this._decorMeshes = [];
 
     // DOM
     this._hudEl?.remove();
     this._msgEl?.remove();
     this._craftEl?.remove();
+    this._hpEl?.remove();
+    this._clockEl?.remove();
     window._mc_craft = null;
     window._mc_slot  = null;
     clearTimeout(this._msgTimer);
+
+    // Reset sky
+    if (this._skyMesh) this._skyMesh.material.color.setHex(0x5599ee);
 
     // Restore HUD
     ['hud-health','hud-coins','hud-level','hud-msg','ability-panel','hud-xp'].forEach(id => {
