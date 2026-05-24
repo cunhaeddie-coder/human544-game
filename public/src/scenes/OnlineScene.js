@@ -379,13 +379,19 @@ export class OnlineScene {
     this._t2('ESCOLHA O MINIGAME:', 18, 0xffcc00, 640, 80);
 
     const games = [
-      { label: '⚽  Football', x: 320, bc: 0x0a1a05, hc: 0x0d3010, tc: 0x44ee88,
+      { label: '⚽  Football', x: 200, bc: 0x0a1a05, hc: 0x0d3010, tc: 0x44ee88,
         action: () => this._buildVoteScreen(
           [{ name: 'Arena Clássica' }, { name: 'Campo com Muros' }],
           'FootballScene'
         )
       },
-      { label: '🏎  Racing',   x: 960, bc: 0x1a0a00, hc: 0x3a1800, tc: 0xffaa44,
+      { label: '⛏  Minecraft', x: 640, bc: 0x0a1a0a, hc: 0x163a16, tc: 0x88dd44,
+        action: () => {
+          this._net.socket.emit('startGame', { scene: 'MinecraftScene', mode: 'online' });
+          this._startGame({ scene: 'MinecraftScene', mode: 'online' });
+        }
+      },
+      { label: '🏎  Racing',   x: 1080, bc: 0x1a0a00, hc: 0x3a1800, tc: 0xffaa44,
         action: () => this._buildVoteScreen(
           [{ name: 'Oval Clássico' }, { name: 'Cidade' }],
           'RacingScene'
@@ -394,13 +400,13 @@ export class OnlineScene {
     ];
 
     games.forEach(({ label, x, bc, hc, tc, action }) => {
-      E.plane(364, 264, hc, x, 310, Z_BG+2);
-      E.plane(360, 260, bc, x, 310, Z_BG+1);
-      const btn = E.box(360, 260, 4, bc, x, 310, Z_BOX);
+      E.plane(264, 264, hc, x, 310, Z_BG+2);
+      E.plane(260, 260, bc, x, 310, Z_BG+1);
+      const btn = E.box(260, 260, 4, bc, x, 310, Z_BOX);
       btn.material.transparent = true; btn.material.opacity = 0.01;
-      this._t2(label, 16, tc, x, 310);
+      this._t2(label, 14, tc, x, 310);
       this._dynObjs.push(btn);
-      this._addDynBtn({ gx: x, gy: 310, w: 360, h: 260, box: btn, bc, action });
+      this._addDynBtn({ gx: x, gy: 310, w: 260, h: 260, box: btn, bc, action });
     });
 
     const bk = E.box(160, 30, 4, 0x150505, 640, 560, Z_BOX);
@@ -469,7 +475,8 @@ export class OnlineScene {
     this._closeJoinOverlay();
     const scene = data.scene || 'GameScene';
     const level = data.level || 1;
-    this.m.start(scene, { level, mode: 'online', skipRoom: true });
+    const code  = data.code || this._net?.roomCode || null;
+    this.m.start(scene, { level, mode: data.mode || 'online', skipRoom: true, code });
   }
 
   _back() {

@@ -175,6 +175,12 @@ io.on('connection', socket => {
     socket.to(currentRoom).emit('pvpBullet', data);
   });
 
+  // Minecraft — bloco quebrado/colocado, relay para a sala
+  socket.on('mcBlockChange', data => {
+    if (!currentRoom) return;
+    socket.to(currentRoom).emit('mcBlockChange', data);
+  });
+
   // Kill sync — inimigo morreu, relay para todos na sala
   socket.on('enemyKilled', data => {
     if (!currentRoom) return;
