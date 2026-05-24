@@ -136,6 +136,10 @@ export class MinecraftScene {
     this._net        = null;
     this._remPlayers = {};
     this._netCbs     = {};
+    // Mobile
+    this._isMobile    = false;
+    this._mcActionsEl = null;
+    this._touchTargetH= null;
   }
 
   // ── Create ─────────────────────────────────────────────────────
@@ -173,6 +177,7 @@ export class MinecraftScene {
     this._buildWorld();
     this._buildHUD();
     this._setupMouse();
+    this._setupMobileControls();
 
     // Camera snap to spawn
     this.e._camX = Math.max(GW/2, Math.min(spx, WW*B - GW/2));
@@ -309,6 +314,83 @@ export class MinecraftScene {
     this._mouseTarget = (wx >= 0 && wx < WW && wy >= 0 && wy < WH) ? { wx, wy } : null;
   }
 
+  // ── Mobile touch controls ─────────────────────────────────────
+  _setupMobileControls() {
+    if (!( ('ontouchstart' in window) || navigator.maxTouchPoints > 0 )) return;
+    this._isMobile = true;
+
+    // Show the D-pad (movement + jump via ▲ → KeyW)
+    const tc = document.getElementById('touch-controls');
+    if (tc) tc.style.display = 'flex';
+    // Hide game-specific buttons (shoot/ability/jump) — we replace them
+    const tcA = document.getElementById('tc-actions');
+    if (tcA) tcA.style.display = 'none';
+
+    // Create Minecraft action panel (bottom-right)
+    this._mcActionsEl = document.createElement('div');
+    this._mcActionsEl.style.cssText =
+      'position:fixed;bottom:18px;right:16px;display:flex;flex-direction:column;' +
+      'align-items:flex-end;gap:8px;z-index:350;pointer-events:none;';
+
+    const mkBtn = (label, bg, brd, col) => {
+      const b = document.createElement('button');
+      b.innerHTML = label;
+      b.style.cssText =
+        `width:66px;height:58px;border-radius:14px;border:2px solid ${brd};` +
+        `font-size:24px;pointer-events:all;background:${bg};color:${col};` +
+        'display:flex;align-items:center;justify-content:center;' +
+        '-webkit-tap-highlight-color:transparent;user-select:none;touch-action:none;';
+      return b;
+    };
+
+    // ⛏ MINE — hold to mine at targeted block (sets _mouseDown like left-click)
+    const mineBtn = mkBtn('⛏', 'rgba(100,50,10,0.88)', 'rgba(210,130,40,0.9)', '#ffcc66');
+    mineBtn.addEventListener('touchstart',  e => { e.preventDefault(); this._mouseDown = true;  }, { passive:false });
+    mineBtn.addEventListener('touchend',    e => { e.preventDefault(); this._mouseDown = false; }, { passive:false });
+    mineBtn.addEventListener('touchcancel', e => { e.preventDefault(); this._mouseDown = false; }, { passive:false });
+
+    // 🧱 PLACE — tap to place selected block at targeted position
+    const placeBtn = mkBtn('🧱', 'rgba(30,80,20,0.88)', 'rgba(80,190,40,0.9)', '#88dd44');
+    placeBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      this.inp.injectKey('KeyF', true);
+      requestAnimationFrame(() => this.inp.injectKey('KeyF', false));
+    }, { passive:false });
+
+    // ⚒ CRAFT — tap to open/close crafting menu
+    const craftBtn = mkBtn('⚒', 'rgba(20,40,80,0.88)', 'rgba(40,110,220,0.9)', '#66aaff');
+    craftBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      this.inp.injectKey('KeyR', true);
+      requestAnimationFrame(() => this.inp.injectKey('KeyR', false));
+    }, { passive:false });
+
+    // ▲ JUMP — separate from D-pad for right-thumb jump
+    const jumpBtn = mkBtn('▲', 'rgba(20,60,20,0.88)', 'rgba(60,180,60,0.9)', '#88ff88');
+    jumpBtn.style.fontSize = '18px';
+    jumpBtn.style.fontWeight = 'bold';
+    jumpBtn.addEventListener('touchstart',  e => { e.preventDefault(); this.inp.injectKey('Space', true);  }, { passive:false });
+    jumpBtn.addEventListener('touchend',    e => { e.preventDefault(); this.inp.injectKey('Space', false); }, { passive:false });
+    jumpBtn.addEventListener('touchcancel', e => { e.preventDefault(); this.inp.injectKey('Space', false); }, { passive:false });
+
+    // Stack: craft (top) → place → mine (bottom, most used near thumb)
+    this._mcActionsEl.append(craftBtn, placeBtn, mineBtn, jumpBtn);
+    document.body.appendChild(this._mcActionsEl);
+
+    // Touch on canvas (outside buttons/D-pad) → update mine/place target
+    const canvas = this.e.renderer.domElement;
+    this._touchTargetH = (e) => {
+      for (const t of e.touches) {
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        if (el && (el.tagName === 'BUTTON' || el.closest('#touch-controls'))) continue;
+        this._updateMouseTarget({ clientX: t.clientX, clientY: t.clientY });
+        break;
+      }
+    };
+    canvas.addEventListener('touchstart', this._touchTargetH, { passive:true });
+    canvas.addEventListener('touchmove',  this._touchTargetH, { passive:true });
+  }
+
   // ── Online ─────────────────────────────────────────────────────
   async _initOnline(data) {
     const net = await getNetwork();
@@ -372,8 +454,9 @@ export class MinecraftScene {
   _buildHUD() {
     this._hudEl = document.createElement('div');
     this._hudEl.style.cssText = `position:fixed;bottom:8px;left:50%;transform:translateX(-50%);
-      display:flex;gap:3px;z-index:500;pointer-events:none;font-family:monospace;`;
+      display:flex;gap:3px;z-index:500;pointer-events:all;font-family:monospace;`;
     document.body.appendChild(this._hudEl);
+    window._mc_slot = (i) => { this._hotbar = i; this._updateHUD(); };
 
     this._msgEl = document.createElement('div');
     this._msgEl.style.cssText = `position:fixed;top:10px;left:50%;transform:translateX(-50%);
@@ -404,8 +487,9 @@ export class MinecraftScene {
       const sel = i === this._hotbar;
       const def = BLOCKS[s.id];
       const col = def ? '#' + def.color.toString(16).padStart(6,'0') : 'transparent';
-      return `<div style="width:42px;height:42px;background:${sel?'rgba(60,130,255,0.35)':'rgba(0,0,0,0.55)'};
-        border:${sel?'2px solid #4488ff':'2px solid #334455'};border-radius:5px;
+      return `<div onclick="window._mc_slot(${i})"
+        style="width:42px;height:42px;background:${sel?'rgba(60,130,255,0.35)':'rgba(0,0,0,0.55)'};
+        border:${sel?'2px solid #4488ff':'2px solid #334455'};border-radius:5px;cursor:pointer;
         display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
         <div style="width:20px;height:20px;background:${s.qty?col:'transparent'};border-radius:3px;
           ${def?.light?'box-shadow:0 0 5px #ff8800;':''}"></div>
@@ -488,13 +572,25 @@ export class MinecraftScene {
     // ── Mining ──────────────────────────────────────────────────
     let mineTarget = null;
 
-    if (this._mouseDown && this._mouseTarget) {
-      const { wx, wy } = this._mouseTarget;
-      // Limit range to 7 blocks (Manhattan distance)
-      const pdx = Math.abs(wx - Math.floor(cx / B));
-      const pdy = Math.abs(wy - Math.floor(cy / B));
-      if (pdx + pdy <= 7) mineTarget = { wx, wy };
+    if (this._mouseDown) {
+      if (this._mouseTarget) {
+        // Desktop/touch: target under cursor, range-checked
+        const { wx, wy } = this._mouseTarget;
+        const pdx = Math.abs(wx - Math.floor(cx / B));
+        const pdy = Math.abs(wy - Math.floor(cy / B));
+        if (pdx + pdy <= 7) mineTarget = { wx, wy };
+      } else {
+        // Mobile: ⛏ held without canvas target → mine block in front
+        const tx = Math.floor((cx + this._dir * B * 1.4) / B);
+        const ty = Math.floor(cy / B);
+        for (const [wx, wy] of [[tx,ty],[tx,ty-1],[tx,ty+1]]) {
+          if (wx >= 0 && wx < WW && wy >= 0 && wy < WH && this._world[wy*WW+wx] !== 0) {
+            mineTarget = { wx, wy }; break;
+          }
+        }
+      }
     } else if (inp.isDown('KeyZ')) {
+      // Z key (keyboard fallback)
       const tx = Math.floor((cx + this._dir * B * 1.4) / B);
       const ty = Math.floor(cy / B);
       for (const [wx, wy] of [[tx,ty],[tx,ty-1],[tx,ty+1]]) {
@@ -592,11 +688,30 @@ export class MinecraftScene {
       if (onLeft)   sock.off('playerLeft',    onLeft);
     }
 
+    // Mobile cleanup
+    if (this._isMobile) {
+      const tc = document.getElementById('touch-controls');
+      if (tc) tc.style.display = 'none';
+      const tcA = document.getElementById('tc-actions');
+      if (tcA) tcA.style.display = '';
+      this._mcActionsEl?.remove();
+      const canvas = this.e.renderer.domElement;
+      if (this._touchTargetH) {
+        canvas.removeEventListener('touchstart', this._touchTargetH);
+        canvas.removeEventListener('touchmove',  this._touchTargetH);
+      }
+      // Release any held virtual keys
+      this.inp.injectKey('Space', false);
+      this.inp.injectKey('KeyF',  false);
+      this.inp.injectKey('KeyR',  false);
+    }
+
     // DOM
     this._hudEl?.remove();
     this._msgEl?.remove();
     this._craftEl?.remove();
     window._mc_craft = null;
+    window._mc_slot  = null;
     clearTimeout(this._msgTimer);
 
     // Restore HUD
