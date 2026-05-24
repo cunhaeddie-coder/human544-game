@@ -1,4 +1,4 @@
-const CACHE = 'human544-v3';
+const CACHE = 'human544-v4';
 
 // Assets to pre-cache on install
 const PRECACHE = [

@@ -590,21 +590,25 @@ export class MinecraftScene {
 
   // ── NPCs ───────────────────────────────────────────────────────
   _spawnNPCs() {
-    const surfaceY = (wx) => {
+    const cx = Math.floor(WW / 2); // player spawn column
+    // Find first solid Y for a given column, return NPC center above it
+    const surfY = (wx) => {
+      const col = Math.max(0, Math.min(WW - 1, wx));
       for (let wy = 0; wy < WH; wy++) {
-        if (this._world[wy*WW+wx] !== 0) return wy * B - 22;
+        if (this._world[wy * WW + col] !== 0) return wy * B - 20;
       }
-      return SKY_H * B - 22;
+      return SKY_H * B - 20;
     };
-    // 5 sheep spread across map surface
-    for (let i = 0; i < 5; i++) {
-      const wx = 10 + Math.floor(i * (WW - 20) / 4);
-      this._makeNpc('sheep', wx * B + B/2, surfaceY(wx));
+    // Offsets from center so NPCs start visible near the player
+    const sheepOff = [-12, -6, 8, 16, 22];
+    for (const off of sheepOff) {
+      const wx = cx + off;
+      this._makeNpc('sheep', wx * B + B/2, surfY(wx));
     }
-    // 2 wolves
-    for (let i = 0; i < 2; i++) {
-      const wx = 25 + i * 55;
-      this._makeNpc('wolf', wx * B + B/2, surfaceY(wx));
+    const wolfOff = [-18, 14];
+    for (const off of wolfOff) {
+      const wx = cx + off;
+      this._makeNpc('wolf', wx * B + B/2, surfY(wx));
     }
   }
 
@@ -639,7 +643,7 @@ export class MinecraftScene {
     const sw  = type === 'zombie' ? 28 : 50;
     const sh  = type === 'zombie' ? 50 : 38;
     sp.scale.set(sw, sh, 1);
-    sp.position.set(npc.x, -npc.y, 1); // game-coords: Y must be negated for THREE.js
+    sp.position.set(npc.x, -npc.y, 10); // z=10: in front of block geometry (blocks extend to z+8.8)
     this.e.scene.add(sp);
     return sp;
   }
@@ -735,7 +739,7 @@ export class MinecraftScene {
       // Sprite mirror + position (Y negated: game-coords → THREE.js)
       const sw = Math.abs(npc.sprite.scale.x);
       npc.sprite.scale.x = sw * (npc.dir < 0 ? -1 : 1);
-      npc.sprite.position.set(npc.x, -npc.y, 1);
+      npc.sprite.position.set(npc.x, -npc.y, 10);
     }
   }
 
@@ -912,22 +916,22 @@ export class MinecraftScene {
         // Flower: stem + head
         const headCol = Math.random() < 0.5 ? 0xff4499 : (Math.random() < 0.5 ? 0xffdd00 : 0xff7700);
         this._decorMeshes.push(
-          this.e.box(3, 12, 3, 0x22aa22, gx, gy - 6, 2),
-          this.e.box(11, 9, 3, headCol,  gx, gy - 15, 2)
+          this.e.box(3, 12, 3, 0x22aa22, gx, gy - 6, 10),
+          this.e.box(11, 9, 3, headCol,  gx, gy - 15, 10)
         );
       } else if (r < 0.70) {
         // Grass tufts
         const col = 0x33bb33;
         this._decorMeshes.push(
-          this.e.box(2, 13, 3, col, gx - 5, gy - 7, 2),
-          this.e.box(2, 16, 3, col, gx,     gy - 8, 2),
-          this.e.box(2, 13, 3, col, gx + 5, gy - 7, 2)
+          this.e.box(2, 13, 3, col, gx - 5, gy - 7, 10),
+          this.e.box(2, 16, 3, col, gx,     gy - 8, 10),
+          this.e.box(2, 13, 3, col, gx + 5, gy - 7, 10)
         );
       } else {
         // Mushroom: stem + cap
         this._decorMeshes.push(
-          this.e.box(5, 9,  3, 0xddccaa, gx, gy - 5,  2),
-          this.e.box(14, 7, 3, 0xcc3322, gx, gy - 13, 2)
+          this.e.box(5, 9,  3, 0xddccaa, gx, gy - 5,  10),
+          this.e.box(14, 7, 3, 0xcc3322, gx, gy - 13, 10)
         );
       }
     }
