@@ -24,20 +24,33 @@ export class BossLich {
     this.body = physics.addBody(new Body(cx - 20, cy - 40, 40, 80));
     this.body.allowGravity = false;
 
-    this.mesh = scene.engine.box(40, 80, 30, 0x220033, cx, cy, 6);
-    this.mesh.material.emissive = new THREE.Color(0x110022);
-    this.mesh.material.emissiveIntensity = 0.8;
-
+    // Body — robe escuro
+    this.mesh = scene.engine.box(38, 60, 28, 0x1a0028, cx, cy + 8, 6);
+    this.mesh.material.emissive = new THREE.Color(0x110018);
+    this.mesh.material.emissiveIntensity = 0.9;
+    // Head — crânio
+    this._head = scene.engine.box(28, 28, 30, 0xddccbb, cx, cy - 26, 7);
+    this._head.material.emissive = new THREE.Color(0x110a06);
+    this._head.material.emissiveIntensity = 0.3;
+    // Crown (coroa)
+    this._crown = scene.engine.box(32, 8, 14, 0xcc8800, cx, cy - 44, 8);
+    this._crown.material.emissive = new THREE.Color(0x663300);
+    this._crown.material.emissiveIntensity = 1;
     // Olhos brilhantes
-    this._eyeL = scene.engine.box(8, 8, 4, 0x8800ff, cx - 10, cy - 20, 7);
-    this._eyeR = scene.engine.box(8, 8, 4, 0x8800ff, cx + 10, cy - 20, 7);
-    this._eyeL.material.emissive = new THREE.Color(0x440088);
-    this._eyeR.material.emissive = new THREE.Color(0x440088);
-    this._eyeL.material.emissiveIntensity = 1;
-    this._eyeR.material.emissiveIntensity = 1;
+    this._eyeL = scene.engine.box(7, 7, 4, 0x9900ff, cx - 7, cy - 26, 9);
+    this._eyeR = scene.engine.box(7, 7, 4, 0x9900ff, cx + 7, cy - 26, 9);
+    this._eyeL.material.emissive = new THREE.Color(0x5500bb);
+    this._eyeR.material.emissive = new THREE.Color(0x5500bb);
+    this._eyeL.material.emissiveIntensity = 2;
+    this._eyeR.material.emissiveIntensity = 2;
+    // Staff (cajado)
+    this._staff = scene.engine.box(5, 60, 5, 0x553300, cx + 24, cy, 7);
+    this._staffOrb = scene.engine.box(12, 12, 12, 0x6600ff, cx + 24, cy - 36, 8);
+    this._staffOrb.material.emissive = new THREE.Color(0x3300aa);
+    this._staffOrb.material.emissiveIntensity = 1.5;
 
-    this._hpBg  = scene.engine.box(200, 10, 4, 0x333333, cx, cy - 60, 20);
-    this._hpBar = scene.engine.box(198, 8,  5, 0x8800ff, cx, cy - 60, 21);
+    this._hpBg  = scene.engine.box(200, 10, 4, 0x333333, cx, cy - 70, 20);
+    this._hpBar = scene.engine.box(198, 8,  5, 0x8800ff, cx, cy - 70, 21);
 
     scene._showMsg('BOSS: Lich das Sombras!', 4000);
   }
@@ -83,11 +96,12 @@ export class BossLich {
     this.minions.forEach(m => { if (m.alive) m.alive = false; });
     this._removeShield();
     this.scene._activateExit();
-    [this.mesh, this._eyeL, this._eyeR, this._hpBar, this._hpBg].forEach(m => {
+    [this.mesh, this._head, this._crown, this._eyeL, this._eyeR,
+     this._staff, this._staffOrb, this._hpBar, this._hpBg].forEach(m => {
       if (m) this.scene.engine.remove(m);
     });
     this.physics.remove(this.body);
-    this.scene._showMsg('Lich derrotado!', 3000);
+    this.scene._showMsg('Lich derrotado! Fase desbloqueada!', 3000);
   }
 
   _updBar() {
@@ -104,14 +118,23 @@ export class BossLich {
     this._teleTimer   -= dt;
     this._summonTimer -= dt;
 
-    // Hover senoidal
-    const hoverY = this._cy + Math.sin(this._t * 1.5) * 40;
-    this.body.x = this._cx - 20;
+    // Hover senoidal — move horizontalmente também ao enraivecer
+    const anger = this.hp < this.maxHp * 0.4;
+    const sideT = anger ? Math.sin(this._t * 0.8) * 120 : 0;
+    const hoverY = this._cy + Math.sin(this._t * (anger ? 2.5 : 1.5)) * (anger ? 60 : 40);
+    this.body.x = this._cx + sideT - 19;
     this.body.y = hoverY - 40;
-    this.mesh.position.set(this.x, -this.y, 6);
-    this._eyeL.position.set(this.x - 10, -(this.y - 20), 7);
-    this._eyeR.position.set(this.x + 10, -(this.y - 20), 7);
-    if (this._shieldMesh) this._shieldMesh.position.set(this.x, -this.y, 4);
+    const sx = this.x, sy = this.y;
+    this.mesh.position.set(sx, -(sy + 8), 6);
+    this._head.position.set(sx, -(sy - 26), 7);
+    this._crown.position.set(sx, -(sy - 44), 8);
+    this._eyeL.position.set(sx - 7, -(sy - 26), 9);
+    this._eyeR.position.set(sx + 7, -(sy - 26), 9);
+    this._staff.position.set(sx + 24, -sy, 7);
+    this._staffOrb.position.set(sx + 24, -(sy - 36), 8);
+    // Orb pulsa
+    this._staffOrb.material.emissiveIntensity = 1 + Math.sin(this._t * 5) * 0.6;
+    if (this._shieldMesh) this._shieldMesh.position.set(sx, -sy, 4);
     this._updBar();
 
     // Raios de energia

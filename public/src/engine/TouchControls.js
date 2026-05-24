@@ -8,12 +8,13 @@ export class TouchControls {
     this._active = new Map(); // touch identifier → códigos
 
     const map = {
-      'tc-left':  ['KeyA'],
-      'tc-right': ['KeyD'],
-      'tc-up':    ['KeyW'],
-      'tc-down':  ['KeyS'],
-      'tc-jump':  ['KeyW', 'ArrowUp'],
-      'tc-shoot': ['Space'],
+      'tc-left':    ['KeyA'],
+      'tc-right':   ['KeyD'],
+      'tc-up':      ['KeyW'],
+      'tc-down':    ['KeyS'],
+      'tc-jump':    ['KeyW', 'ArrowUp'],
+      'tc-shoot':   ['Space'],
+      'tc-ability': ['KeyQ'],
     };
 
     Object.entries(map).forEach(([id, codes]) => {

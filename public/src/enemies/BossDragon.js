@@ -57,8 +57,9 @@ function drawGhost() {
 export class BossDragon {
   constructor(scene, physics) {
     this.scene = scene; this.physics = physics;
-    this.alive = true; this.hp = 3000; this.maxHp = 3000;
+    this.alive = true; this.hp = 3500; this.maxHp = 3500;
     this._timer = 0; this._dir = -1; this._sineT = 0;
+    this._enraged = false; this._wallTimer = 0;
     this.ghosts = [];
     const cx = scene.currentConfig.worldWidth - 350, cy = 300;
     this.body = new Body(cx-50, cy-30, 100, 60);
@@ -90,20 +91,49 @@ export class BossDragon {
   _updBar() { const f=document.getElementById('d-hp'); if(f) f.style.width=Math.max(0,(this.hp/this.maxHp)*100)+'%'; }
   update(player, dt) {
     if (!this.alive) return;
-    this._timer += dt; this._sineT += dt;
+    this._timer += dt; this._sineT += dt; this._wallTimer += dt;
+
+    // Enrage at 35% HP
+    if (!this._enraged && this.hp < this.maxHp * 0.35) {
+      this._enraged = true;
+      this.scene._showMsg('🔥 DRAGÃO ENRAIVECIDO!', 3000);
+      this.scene.fx?.flashScreen(0xff4400, 0.55, 0.45);
+      this.sprite.material.color.set(0xff2200);
+    }
+
     const px2=player?.x??0, py2=player?.y??0;
-    const spd = this.hp < this.maxHp*0.5 ? 130 : 80;
+    const spd = this._enraged ? 180 : this.hp < this.maxHp*0.6 ? 130 : 80;
     this.body.vx = this._dir * spd;
-    this.body.vy = Math.sin(this._sineT*1.8) * 60;
+    this.body.vy = Math.sin(this._sineT * (this._enraged ? 3.5 : 1.8)) * (this._enraged ? 90 : 60);
     const cx2 = this.scene.currentConfig.worldWidth - 350;
     if (Math.abs(this.x - cx2) > 260) this._dir *= -1;
     this.body.y = Math.max(80, Math.min(this.body.y, 340));
-    const rate = this.hp < this.maxHp*0.5 ? 1.0 : 1.8;
+
+    const rate = this._enraged ? 0.65 : this.hp < this.maxHp*0.6 ? 1.0 : 1.8;
     if (this._timer > rate) {
       this._timer = 0;
       const dx=px2-this.x, dy=py2-this.y, d=Math.sqrt(dx*dx+dy*dy)||1;
-      this.scene.spawnEnemyProjectile(this.x+40*this._dir, this.y, (dx/d)*260, (dy/d)*260);
-      if (this.hp < this.maxHp*0.5) this._spawnGhost(px2, py2);
+      if (this._enraged) {
+        // 3-way fire spread
+        this.scene.spawnEnemyProjectile(this.x+40*this._dir, this.y, (dx/d)*300, (dy/d)*300);
+        this.scene.spawnEnemyProjectile(this.x+40*this._dir, this.y, (dx/d)*260, (dy/d+0.4)*260);
+        this.scene.spawnEnemyProjectile(this.x+40*this._dir, this.y, (dx/d)*260, (dy/d-0.4)*260);
+      } else {
+        this.scene.spawnEnemyProjectile(this.x+40*this._dir, this.y, (dx/d)*260, (dy/d)*260);
+      }
+      if (this.hp < this.maxHp*0.6) this._spawnGhost(px2, py2);
+    }
+
+    // Fire wall: a curtain of projectiles falling from above every 8s
+    if (this._wallTimer > (this._enraged ? 5 : 8)) {
+      this._wallTimer = 0;
+      for (let i = 0; i < 6; i++) {
+        const fx = px2 - 160 + i * 64;
+        setTimeout(() => {
+          if (!this.alive) return;
+          this.scene.spawnEnemyProjectile(fx, 60, 0, 260);
+        }, i * 100);
+      }
     }
     this.sprite.position.set(this.x, -this.y, 8);
     this.sprite.scale.x = this._dir >= 0 ? 140 : -140;

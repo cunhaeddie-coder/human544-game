@@ -326,8 +326,7 @@ export class Player {
     let step = 0;
     const danceInterval = setInterval(() => {
       if (step >= 8) { clearInterval(danceInterval); this._dancing = false; return; }
-      this.body.vy = -180;
-      step++;
+      if (this.body.onGround) { this.body.vy = -180; step++; }
     }, 200);
     // Emote flutuante
     this.scene.fx?.spawnTextPop?.(this.x, this.y - 50, '💃', 0xff88ff);

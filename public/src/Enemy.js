@@ -64,6 +64,9 @@ export class Enemy {
     }
 
     this._syncMesh();
+
+    // Kill plane: enemy falls into the void
+    if (this.body.y > 650 && this.alive) this._die();
   }
 
   _patrol() {
@@ -174,6 +177,19 @@ export class Enemy {
     // Sprite faces camera automatically (it's a Three.Sprite)
     this.mesh.position.set(this.x, -this.y, 5);
     if (this._hpMesh) this._updateHpBar();
+  }
+
+  // Called when a remote player kills this enemy — cleanup without awarding local rewards
+  removeRemote() {
+    if (!this.alive) return;
+    this.alive = false;
+    this._sprTex?.dispose();
+    if (this.mesh?.material?.map) this.mesh.material.map.dispose();
+    if (this.mesh?.material) this.mesh.material.dispose();
+    this.scene.engine.scene.remove(this.mesh);
+    if (this._hpMesh) this.scene.engine.remove(this._hpMesh);
+    if (this._hpBg)   this.scene.engine.remove(this._hpBg);
+    this.phys.remove(this.body);
   }
 
   destroy() {

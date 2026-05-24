@@ -21,6 +21,7 @@ import { CharacterSprite } from '../CharacterSprite.js';
 import { TouchControls }  from '../engine/TouchControls.js';
 import { FXSystem }       from '../systems/FXSystem.js';
 import { Audio }          from '../systems/AudioSystem.js';
+import { ChatSystem }     from '../systems/ChatSystem.js';
 
 const TW = 64, TH_GR = 32, TH_PL = 20, LAD_H = 64;
 
@@ -112,6 +113,7 @@ export class GameScene {
     this.pets            = null;
     this.touchControls   = null;
     this.fx              = null;
+    this._chat           = null;
   }
 
   create(data = {}) {
@@ -138,17 +140,26 @@ export class GameScene {
     this._buildStars(cfg);
     this._buildEnemies(cfg);
 
-    // Boss
-    if (cfg.boss)               setTimeout(() => Audio.bossAlert(), 3200);
-    if (cfg.boss === 'robot')   this.boss = new BossRobot(this, this.physics);
-    if (cfg.boss === 'dragon')  this.boss = new BossDragon(this, this.physics);
-    if (cfg.boss === 'phoenix') this.boss = new BossPhoenix(this, this.physics);
-    if (cfg.boss === 'lich')    this.boss = new BossLich(this, this.physics);
-    if (cfg.boss === 'golem')   this.boss = new BossGolem(this, this.physics);
-    if (cfg.boss === 'hydra')   this.boss = new BossHydra(this, this.physics);
-    if (cfg.boss === 'void')    this.boss = new BossVoid(this, this.physics);
-    if (cfg.boss === 'titan')   this.boss = new BossTitan(this, this.physics);
-    if (cfg.boss === 'omega')   this.boss = new BossOmega(this, this.physics);
+    // Boss — wrapped in try/catch so a constructor error doesn't lock the exit forever
+    if (cfg.boss) {
+      setTimeout(() => Audio.bossAlert(), 3200);
+      try {
+        if (cfg.boss === 'robot')   this.boss = new BossRobot(this, this.physics);
+        if (cfg.boss === 'dragon')  this.boss = new BossDragon(this, this.physics);
+        if (cfg.boss === 'phoenix') this.boss = new BossPhoenix(this, this.physics);
+        if (cfg.boss === 'lich')    this.boss = new BossLich(this, this.physics);
+        if (cfg.boss === 'golem')   this.boss = new BossGolem(this, this.physics);
+        if (cfg.boss === 'hydra')   this.boss = new BossHydra(this, this.physics);
+        if (cfg.boss === 'void')    this.boss = new BossVoid(this, this.physics);
+        if (cfg.boss === 'titan')   this.boss = new BossTitan(this, this.physics);
+        if (cfg.boss === 'omega')   this.boss = new BossOmega(this, this.physics);
+      } catch(err) {
+        console.error('[GameScene] Boss creation failed:', err);
+        this.boss = null;
+        this._exitLocked = false;
+        this._showMsg('⚠ Boss falhou — saída liberada', 3000);
+      }
+    }
 
     // Boss Raid: multiplica HP pelo número de jogadores
     if (data.mode === 'raid' && this.boss) {
@@ -204,12 +215,16 @@ export class GameScene {
           }
         }
 
-        // Kill sync — quando outro jogador mata um inimigo, remove localmente
+        // Chat
+        const pname = SaveSystem.getItem('playerName') || `Player${Math.floor(Math.random()*999)}`;
+        this._chat = new ChatSystem(net, pname);
+
+        // Kill sync — quando outro jogador mata um inimigo, remove localmente sem dar recompensa
         net.socket?.on('enemyKilled', d => {
           const en = this.enemies[d.id];
           if (en?.alive) {
-            en.alive = false;
             this.fx?.spawnDeathBurst(en.x, en.y, en.def?.color ?? 0xff4400, 8);
+            en.removeRemote();
           }
         });
       });
@@ -500,6 +515,9 @@ export class GameScene {
   update(dt) {
     if (!this.player || this._exiting) return;
     if (this._paused) return;
+    // Chat: Enter abre o input (apenas no modo online)
+    if (this._chat && this.input?.justDown('Enter')) { this._chat.tryOpen(); return; }
+    if (this._chat?.isOpen()) return; // bloqueia input do jogo enquanto chat está aberto
     if (this.input?.justDown('Escape')) { window.togglePause?.(); return; }
     const p = this.player;
 
@@ -742,6 +760,7 @@ export class GameScene {
     this.enemies.forEach(e => e.destroy());
     this.boss?.destroy();
     this._venusPlants?.forEach(vp => vp.destroy());
+    this._chat?.destroy();
     this.network?.destroy();
     Object.values(this._remotePlayers).forEach(rp => rp.sprite?.destroy());
     this._remotePlayers = {};

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { Physics2D, Body } from '../engine/Physics2D.js';
 import { getNetwork } from '../Network.js';
+import { CharacterSprite } from '../CharacterSprite.js';
 
 export class PVPScene {
   constructor(e, m, i) {
@@ -169,11 +170,9 @@ export class PVPScene {
   _makePlayer(x, y, color, label, idx) {
     const body = new Body(x - 14, y - 42, 28, 42);
     this.physics.addBody(body);
-    const mesh = this.e.box(28, 42, 18, color, x, y - 21, 5);
-    mesh.material.emissive = new THREE.Color(color);
-    mesh.material.emissiveIntensity = 0.25;
-    const lbl = this.e.text(label, 11, color, x, y - 62, 8);
-    return { body, mesh, lbl, hp: 5, maxHp: 5, color, invTimer: 0, dir: idx === 0 ? 1 : -1, idx };
+    const skinName = idx === 0 ? 'warrior' : 'rogue';
+    const sprite = new CharacterSprite(this.e.scene, x, y - 21, skinName, label);
+    return { body, sprite, hp: 5, maxHp: 5, color, invTimer: 0, dir: idx === 0 ? 1 : -1, idx };
   }
 
   _buildHearts() {
@@ -297,16 +296,19 @@ export class PVPScene {
 
     [this._p1, this._p2].forEach((p, idx) => {
       const cx = p.body.cx, cy = p.body.cy;
-      p.mesh.position.set(cx, -cy, 5);
-      p.lbl.position.set(cx, -(cy - 44), 8);
+      const walkFrame = Math.floor(this._t * 7) % 2 === 0 ? 'walk1' : 'walk2';
+      const animState = !p.body.onGround
+        ? (p.body.vy < 0 ? 'jump' : 'fall')
+        : (Math.abs(p.body.vx) > 10 ? walkFrame : 'idle');
+      p.sprite.animate(cx, cy, p.dir, p.dir, 0, animState, 'default');
 
       if (p.invTimer > 0) {
         p.invTimer -= dt;
-        p.mesh.material.transparent = true;
-        p.mesh.material.opacity = Math.sin(this._t * 28) > 0 ? 1 : 0.25;
+        const vis = Math.sin(this._t * 28) > 0;
+        p.sprite.body.material.transparent = true;
+        p.sprite.body.material.opacity = vis ? 1 : 0.2;
       } else {
-        p.mesh.material.transparent = false;
-        p.mesh.material.opacity = 1;
+        p.sprite.body.material.opacity = 1;
       }
 
       if (p.body.y > 600 && !this._roundOver) this._endRound(idx);
@@ -344,6 +346,8 @@ export class PVPScene {
 
   destroy() {
     this._bullets.forEach(bl => { this.physics.remove(bl.body); });
+    this._p1?.sprite?.destroy();
+    this._p2?.sprite?.destroy();
     this.physics.clear();
   }
 }

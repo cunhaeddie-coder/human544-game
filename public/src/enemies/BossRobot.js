@@ -43,8 +43,8 @@ function drawRobot() {
 export class BossRobot {
   constructor(scene, physics) {
     this.scene = scene; this.physics = physics;
-    this.alive = true; this.hp = 2000; this.maxHp = 2000;
-    this._timer = 0; this._dir = -1;
+    this.alive = true; this.hp = 2500; this.maxHp = 2500;
+    this._timer = 0; this._dir = -1; this._enraged = false;
     const cx = scene.currentConfig.worldWidth - 300, cy = 460;
     this.body = new Body(cx-26, cy-40, 52, 80);
     this.body.allowGravity = true;
@@ -76,17 +76,31 @@ export class BossRobot {
     if (!this.alive) return;
     this._timer += dt;
     const px2 = player?.x??0, py2 = player?.y??0;
-    const spd = this.hp < this.maxHp*0.4 ? 160 : this.hp < this.maxHp*0.7 ? 110 : 75;
-    const rate = this.hp < this.maxHp*0.4 ? 0.9 : this.hp < this.maxHp*0.7 ? 1.5 : 2.5;
+
+    // Enrage at 30% HP
+    if (!this._enraged && this.hp < this.maxHp * 0.3) {
+      this._enraged = true;
+      this.scene._showMsg('⚠ ROBOT ENRAIVECIDO!', 3000);
+      this.scene.fx?.flashScreen(0xff0000, 0.5, 0.4);
+      this.sprite.material.color.set(0xff4400);
+    }
+
+    const spd  = this._enraged ? 200 : this.hp < this.maxHp*0.6 ? 120 : 75;
+    const rate = this._enraged ? 0.55 : this.hp < this.maxHp*0.6 ? 1.1 : 2.0;
     this._dir = px2 > this.x ? 1 : -1;
     this.body.vx = this._dir * spd;
+
     if (this._timer > rate) {
       this._timer = 0;
       const dx=px2-this.x, dy=py2-this.y, d=Math.sqrt(dx*dx+dy*dy)||1;
-      if (this.hp < this.maxHp*0.4) {
-        this.scene.spawnEnemyProjectile(this.x,this.y-10,(dx/d)*320,(dy/d)*320);
-        this.scene.spawnEnemyProjectile(this.x,this.y-10,(dx/d-0.3)*280,(dy/d)*280);
-        this.scene.spawnEnemyProjectile(this.x,this.y-10,(dx/d+0.3)*280,(dy/d)*280);
+      if (this._enraged) {
+        // Triple + diagonal spread
+        for (let s = -1; s <= 1; s++) {
+          this.scene.spawnEnemyProjectile(this.x,this.y-10,(dx/d+s*0.35)*340,(dy/d)*340);
+        }
+      } else if (this.hp < this.maxHp*0.6) {
+        this.scene.spawnEnemyProjectile(this.x,this.y-10,(dx/d)*310,(dy/d)*310);
+        this.scene.spawnEnemyProjectile(this.x,this.y-10,(dx/d-0.25)*270,(dy/d)*270);
       } else {
         this.scene.spawnEnemyProjectile(this.x,this.y-10,(dx/d)*290,(dy/d)*290);
       }

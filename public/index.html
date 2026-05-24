@@ -83,6 +83,34 @@
       position:absolute; top:36px; left:18px; font-size:10px; color:#335544;
     }
 
+    /* ── Chat ── */
+    #chat-panel {
+      display:none; position:fixed; bottom:56px; left:8px;
+      width:260px; z-index:400; pointer-events:none;
+      font-family:monospace;
+    }
+    #chat-log {
+      max-height:120px; overflow-y:auto; margin-bottom:4px;
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .chat-line {
+      background:rgba(0,0,0,0.62); color:#ccddee;
+      font-size:11px; padding:2px 7px; border-radius:5px;
+      animation: chatfade 8s forwards;
+    }
+    .chat-line .chat-name { color:#66aaff; font-weight:bold; }
+    .chat-line .chat-name.self { color:#ffcc44; }
+    @keyframes chatfade { 0%,80%{opacity:1} 100%{opacity:0} }
+    #chat-input-wrap {
+      display:none; pointer-events:all;
+      background:rgba(0,0,0,0.75); border:1px solid #335577;
+      border-radius:6px; padding:3px 8px;
+    }
+    #chat-input {
+      width:100%; background:none; border:none; outline:none;
+      color:#eef; font-family:monospace; font-size:12px;
+    }
+
     /* ── Botão Pausa ── */
     #pause-btn {
       display:none; position:fixed; top:8px; right:8px;
@@ -232,12 +260,35 @@
     #rotate-overlay p { font-size:18px; color:#aabbcc; line-height:1.5; }
     @keyframes rotpulse { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(90deg)} }
 
-    /* Mostra overlay em portrait se for touch device (detectado via JS na classe body) */
-    body.is-touch #rotate-overlay {
-      display:none; /* padrão escondido */
-    }
+    /* Rotação automática: em portrait em touch, gira tudo 90° via CSS */
     @media (orientation: portrait) {
-      body.is-touch #rotate-overlay { display:flex; }
+      body.is-touch #rotate-overlay { display:none !important; }
+      body.is-touch canvas,
+      body.is-touch #hud,
+      body.is-touch #touch-controls,
+      body.is-touch #pause-btn {
+        transform-origin: center center;
+        transform: rotate(90deg) translate(-50%, -50%);
+        left: 0; top: 50%;
+      }
+      /* Ajusta o canvas para preencher a tela girada */
+      body.is-touch canvas {
+        position: fixed;
+        width:  100vh !important;
+        height: 56.25vh !important;  /* 720/1280 = 0.5625 */
+        left: 50%; top: 50%;
+        transform: rotate(90deg) translateX(-50%);
+        transform-origin: left center;
+      }
+      body.is-touch #hud {
+        position: fixed;
+        width:  100vh !important;
+        height: 56.25vh !important;
+        left: 50%; top: 50%;
+        transform: rotate(90deg) translateX(-50%);
+        transform-origin: left center;
+        font-size: calc(100vh / 1280) !important;
+      }
     }
   </style>
   <script type="importmap">
@@ -269,6 +320,14 @@
     </div>
     <div id="hud-room"></div>
     <div id="hud-xp" style="position:absolute;bottom:14px;left:18px;font-size:10px;color:#8899aa;"></div>
+  </div>
+
+  <!-- Chat online -->
+  <div id="chat-panel">
+    <div id="chat-log"></div>
+    <div id="chat-input-wrap">
+      <input id="chat-input" type="text" maxlength="120" placeholder="Mensagem... (Enter para enviar)" autocomplete="off" />
+    </div>
   </div>
 
   <!-- Botão pausa (visível só no GameScene) -->
@@ -314,6 +373,7 @@
       </div>
     </div>
     <div id="tc-actions">
+      <button class="tc-btn tc-action" id="tc-ability" style="background:rgba(0,40,80,0.75);color:#66aaff;border-color:rgba(40,100,200,0.6);">⚡</button>
       <button class="tc-btn tc-action" id="tc-jump">PULAR</button>
       <button class="tc-btn tc-action tc-shoot" id="tc-shoot">ATIRAR</button>
     </div>

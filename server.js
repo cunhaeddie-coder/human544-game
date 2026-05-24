@@ -158,6 +158,13 @@ io.on('connection', socket => {
     socket.to(currentRoom).emit('playerEmote', { id:socket.id, emote: data.emote });
   });
 
+  // Chat de texto — relay para a sala com nome do remetente
+  socket.on('chatMsg', ({ text, name }) => {
+    if (!currentRoom || !text) return;
+    const safe = String(text).slice(0, 120).replace(/</g, '&lt;');
+    io.to(currentRoom).emit('chatMsg', { name: name || 'Player', text: safe, id: socket.id });
+  });
+
   // PVP online — relay de estado e balas entre 2 jogadores
   socket.on('pvpState', data => {
     if (!currentRoom) return;

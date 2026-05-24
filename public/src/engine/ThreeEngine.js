@@ -168,7 +168,11 @@ export class ThreeEngine {
   }
 
   _resize() {
-    const r = Math.min(window.innerWidth / GW, window.innerHeight / GH);
+    // Touch devices: fill the screen (cover), desktop: letterbox (contain)
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const r = isTouch
+      ? Math.max(window.innerWidth / GW, window.innerHeight / GH)
+      : Math.min(window.innerWidth / GW, window.innerHeight / GH);
     const s = this.renderer.domElement.style;
     s.width  = GW * r + 'px';
     s.height = GH * r + 'px';

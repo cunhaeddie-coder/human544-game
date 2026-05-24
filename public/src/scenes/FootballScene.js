@@ -23,11 +23,12 @@ const MAPS = [
   },
 ];
 
-const BALL_R     = 18;
-const GOAL_W     = 20, GOAL_H = 140;
-const PLAYER_SPD = 180;
-const KICK_FORCE = 620;
-const PLAYER_R   = 24;
+const BALL_R     = 20;
+const GOAL_W     = 22, GOAL_H = 150;
+const PLAYER_SPD = 200;
+const KICK_FORCE = 700;
+const PLAYER_R   = 22;
+const PLAYER_FRICTION = 0.82; // decelera suavemente ao soltar teclas
 
 export class FootballScene {
   constructor(e, m, i) {
@@ -168,44 +169,75 @@ export class FootballScene {
     const body = new Body(x - PLAYER_R, y - PLAYER_R, PLAYER_R*2, PLAYER_R*2);
     this.physics.addBody(body);
 
+    // Corpo principal do jogador (dois círculos simulados com boxes escalonadas)
     const circle = this.e.box(PLAYER_R*2, PLAYER_R*2, PLAYER_R*2, color, x, y, 4);
-    const nose   = this.e.box(8, 8, 12, 0xffffff, x + (idx === 0 ? PLAYER_R : -PLAYER_R), y, 5);
+    circle.material.emissive = new THREE.Color(color);
+    circle.material.emissiveIntensity = 0.3;
+    // Camisa / número
+    const inner = this.e.box(PLAYER_R*0.9, PLAYER_R*0.9, PLAYER_R*2+1, 0xffffff, x, y, 5);
+    inner.material.transparent = true; inner.material.opacity = 0.25;
+    // Nariz de direção
+    const nose = this.e.box(8, 8, 12, 0xffffff, x + (idx === 0 ? PLAYER_R : -PLAYER_R), y, 5);
+    nose.material.emissive = new THREE.Color(0xffffff); nose.material.emissiveIntensity = 0.5;
 
     this._players[idx] = {
-      idx, body, circle, nose, color,
+      idx, body, circle, inner, nose, color,
       dirX: idx === 0 ? 1 : -1, dirY: 0,
+      moving: false,
     };
   }
 
   _movePlayer(p, leftKey, rightKey, upKey, downKey, dt) {
     const b = p.body, inp = this.inp;
     let vx = 0, vy = 0;
-    if (inp.isDown(leftKey))  { vx = -PLAYER_SPD; p.dirX = -1; p.dirY = 0; }
-    if (inp.isDown(rightKey)) { vx =  PLAYER_SPD; p.dirX =  1; p.dirY = 0; }
-    if (inp.isDown(upKey))    { vy = -PLAYER_SPD; p.dirY = -1; p.dirX = 0; }
-    if (inp.isDown(downKey))  { vy =  PLAYER_SPD; p.dirY =  1; p.dirX = 0; }
-    b.vx = vx;
-    b.vy = vy;
+    p.moving = false;
+    if (inp.isDown(leftKey))  { vx = -PLAYER_SPD; p.dirX = -1; p.dirY = 0; p.moving = true; }
+    if (inp.isDown(rightKey)) { vx =  PLAYER_SPD; p.dirX =  1; p.dirY = 0; p.moving = true; }
+    if (inp.isDown(upKey))    { vy = -PLAYER_SPD; p.dirY = -1; p.dirX = 0; p.moving = true; }
+    if (inp.isDown(downKey))  { vy =  PLAYER_SPD; p.dirY =  1; p.dirX = 0; p.moving = true; }
+    // Diagonal
+    if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707; }
 
-    // Sincronizar meshes do jogador
+    if (p.moving) {
+      b.vx = vx; b.vy = vy;
+    } else {
+      // Atrito suave — HaxBall-style deslize
+      b.vx *= PLAYER_FRICTION;
+      b.vy *= PLAYER_FRICTION;
+    }
+
+    // Sincronizar meshes
     p.circle.position.set(b.cx, -b.cy, 4);
+    p.inner.position.set(b.cx, -b.cy, 5);
     p.nose.position.set(b.cx + p.dirX * PLAYER_R, -(b.cy + p.dirY * PLAYER_R), 5);
 
-    // Chutar: colisão automática ao encostar + Space/F para chute potente
+    // Colisão circular com a bola — separação e transferência de momentum
     const ball = this._ball;
     if (ball) {
       const dx = ball.body.cx - b.cx;
       const dy = ball.body.cy - b.cy;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < PLAYER_R + BALL_R + 4) {
-        const nx = dx / (dist || 1);
-        const ny = dy / (dist || 1);
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const minDist = PLAYER_R + BALL_R;
+      if (dist < minDist + 2) {
+        // Separar para fora (circular push)
+        const overlap = minDist + 2 - dist;
+        const nx = dx / dist, ny = dy / dist;
+        ball.body.x += nx * overlap;
+        ball.body.y += ny * overlap;
+
+        // Momentum transfer: velocidade do jogador contribui para o chute
+        const playerSpd = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
         const powerKick = inp.justDown('Space') || inp.justDown('KeyF') || inp.justDown('KeyH');
-        const force = powerKick ? KICK_FORCE * 1.7 : KICK_FORCE;
-        const kx = (nx * 0.6 + p.dirX * 0.4) * force;
-        const ky = (ny * 0.6 + p.dirY * 0.4) * force;
-        ball.body.vx = kx;
-        ball.body.vy = ky;
+        const baseForce = powerKick ? KICK_FORCE * 1.8 : KICK_FORCE;
+        const momentum  = Math.min(playerSpd * 1.2, 320); // contribuição da velocidade
+
+        // Combina normal do contacto + direção do jogador + momentum
+        const dirBlend = 0.55;
+        const kx = (nx * (1 - dirBlend) + p.dirX * dirBlend) * baseForce + b.vx * 0.4 + momentum * nx;
+        const ky = (ny * (1 - dirBlend) + p.dirY * dirBlend) * baseForce + b.vy * 0.4 + momentum * ny;
+        // Aplica gradualmente para não teleportar a bola
+        ball.body.vx = ball.body.vx * 0.15 + kx * 0.85;
+        ball.body.vy = ball.body.vy * 0.15 + ky * 0.85;
       }
     }
   }
@@ -273,11 +305,12 @@ export class FootballScene {
     if (Math.abs(ball.body.vx) < 1) ball.body.vx = 0;
     if (Math.abs(ball.body.vy) < 1) ball.body.vy = 0;
 
-    // Bounce nas paredes
-    if (ball.body.x < 40)          { ball.body.x = 40; ball.body.vx = Math.abs(ball.body.vx) * 0.7; }
-    if (ball.body.right > 1240)    { ball.body.x = 1240 - BALL_R*2; ball.body.vx = -Math.abs(ball.body.vx) * 0.7; }
-    if (ball.body.y < 135)         { ball.body.y = 135; ball.body.vy = Math.abs(ball.body.vy) * 0.7; }
-    if (ball.body.bottom > 645)    { ball.body.y = 645 - BALL_R*2; ball.body.vy = -Math.abs(ball.body.vy) * 0.7; }
+    // Bounce nas paredes — restituição 0.82 (mais elástico que antes)
+    const REST = 0.82;
+    if (ball.body.x < 40)          { ball.body.x = 40; ball.body.vx = Math.abs(ball.body.vx) * REST; }
+    if (ball.body.right > 1240)    { ball.body.x = 1240 - BALL_R*2; ball.body.vx = -Math.abs(ball.body.vx) * REST; }
+    if (ball.body.y < 135)         { ball.body.y = 135; ball.body.vy = Math.abs(ball.body.vy) * REST; }
+    if (ball.body.bottom > 645)    { ball.body.y = 645 - BALL_R*2; ball.body.vy = -Math.abs(ball.body.vy) * REST; }
 
     ball.mesh.position.set(ball.body.cx, -ball.body.cy, 4);
     ball.pat.position.set(ball.body.cx, -ball.body.cy, 5);
@@ -291,6 +324,10 @@ export class FootballScene {
   }
 
   destroy() {
+    this._players.forEach(p => {
+      if (!p) return;
+      this.e.remove(p.inner);
+    });
     this.physics.clear();
   }
 }

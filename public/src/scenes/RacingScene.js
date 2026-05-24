@@ -61,10 +61,10 @@ const MAPS = [
 ];
 
 const LAPS_TO_WIN = 3;
-const CAR_ACCEL   = 450;
-const CAR_MAX_SPD = 600;
-const CAR_STEER   = 2.4;
-const CAR_DRAG    = 0.92;
+const CAR_ACCEL   = 520;
+const CAR_MAX_SPD = 480;
+const CAR_STEER   = 1.8;    // was 2.4 — less spin-out
+const CAR_DRAG    = 0.015;  // fraction lost per second (was 0.92/frame = ~90 unit/s cap; now ~500)
 
 export class RacingScene {
   constructor(e, m, i) {
@@ -253,8 +253,8 @@ export class RacingScene {
     if (inp.isDown(rightKey)) steer =  CAR_STEER;
 
     car.speed += accel * dt;
-    car.speed *= CAR_DRAG;
-    car.speed = Math.max(-100, Math.min(CAR_MAX_SPD, car.speed));
+    car.speed -= car.speed * CAR_DRAG * dt * 60; // frame-rate-independent drag
+    car.speed = Math.max(-120, Math.min(CAR_MAX_SPD, car.speed));
 
     if (Math.abs(car.speed) > 10) car.angle += steer * dt * (car.speed / CAR_MAX_SPD);
 
