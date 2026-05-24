@@ -639,7 +639,7 @@ export class MinecraftScene {
     const sw  = type === 'zombie' ? 28 : 50;
     const sh  = type === 'zombie' ? 50 : 38;
     sp.scale.set(sw, sh, 1);
-    sp.position.set(npc.x, npc.y, 1);
+    sp.position.set(npc.x, -npc.y, 1); // game-coords: Y must be negated for THREE.js
     this.e.scene.add(sp);
     return sp;
   }
@@ -732,10 +732,10 @@ export class MinecraftScene {
 
       if (npc.y > WH * B + 100) { this._removeNpc(npc); continue; }
 
-      // Sprite mirror + position
+      // Sprite mirror + position (Y negated: game-coords → THREE.js)
       const sw = Math.abs(npc.sprite.scale.x);
       npc.sprite.scale.x = sw * (npc.dir < 0 ? -1 : 1);
-      npc.sprite.position.set(npc.x, npc.y, 1);
+      npc.sprite.position.set(npc.x, -npc.y, 1);
     }
   }
 
@@ -970,12 +970,13 @@ export class MinecraftScene {
 
     this._hpEl = document.createElement('div');
     this._hpEl.style.cssText = 'position:fixed;top:8px;left:8px;z-index:502;pointer-events:none;' +
-      'background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:6px;';
+      'background:rgba(0,0,0,0.55);padding:4px 8px;border-radius:6px;color:#fff;';
     document.body.appendChild(this._hpEl);
 
     this._clockEl = document.createElement('div');
     this._clockEl.style.cssText = 'position:fixed;top:8px;right:8px;z-index:502;pointer-events:none;' +
-      'background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;font-family:monospace;font-size:15px;';
+      'background:rgba(0,0,0,0.55);padding:4px 10px;border-radius:6px;' +
+      'font-family:monospace;font-size:15px;color:#fff;';
     document.body.appendChild(this._clockEl);
 
     this._updateHUD();
