@@ -242,10 +242,12 @@ export class MinecraftScene {
     this._craftEl   = null;
     this._showCraft = false;
     this._msgTimer  = null;
-    // Mouse mining
+    // Mouse mining / placing
     this._mouseDown   = false;
+    this._rmbJustDown = false; // right-click place trigger
     this._mouseTarget = null;
     this._mh          = {};   // mouse handler refs for cleanup
+    this._playerAtkCd = 0;
     // Online
     this._net        = null;
     this._remPlayers = {};
@@ -419,7 +421,9 @@ export class MinecraftScene {
   _setupMouse() {
     const canvas = this.e.renderer.domElement;
     const onDown = (ev) => {
-      if (ev.button === 0) { this._mouseDown = true; this._updateMouseTarget(ev); }
+      this._updateMouseTarget(ev);
+      if (ev.button === 0) this._mouseDown = true;
+      if (ev.button === 2) this._rmbJustDown = true;
     };
     const onUp = (ev) => {
       if (ev.button === 0) this._mouseDown = false;
@@ -427,10 +431,12 @@ export class MinecraftScene {
     const onMove = (ev) => {
       if (this._mouseDown) this._updateMouseTarget(ev);
     };
-    canvas.addEventListener('mousedown', onDown);
-    canvas.addEventListener('mousemove', onMove);
+    const onCtx = (ev) => ev.preventDefault();
+    canvas.addEventListener('mousedown',   onDown);
+    canvas.addEventListener('mousemove',   onMove);
+    canvas.addEventListener('contextmenu', onCtx);
     window.addEventListener('mouseup', onUp);
-    this._mh = { onDown, onUp, onMove };
+    this._mh = { onDown, onUp, onMove, onCtx };
   }
 
   _updateMouseTarget(ev) {
@@ -610,6 +616,11 @@ export class MinecraftScene {
       const wx = cx + off;
       this._makeNpc('wolf', wx * B + B/2, surfY(wx));
     }
+    // 2 initial zombies at ±24 blocks from player so the player can find and fight them
+    for (const off of [-24, 24]) {
+      const wx = Math.max(2, Math.min(WW - 3, cx + off));
+      this._makeNpc('zombie', wx * B + B/2, surfY(wx));
+    }
   }
 
   _makeNpc(type, x, y) {
@@ -626,6 +637,7 @@ export class MinecraftScene {
       tamed:    false,
       boneCount:0,
       attackCd: 0,
+      hitCd:    0,
       wanderT:  0,
       wanderDir:1,
       sprite: null,
@@ -698,11 +710,11 @@ export class MinecraftScene {
   }
 
   _updateNPCs(dt, px, py) {
-    // Day / night cycle — 120s day, 120s night
+    // Day / night cycle — 45s day, 45s night
     this._dayT += dt;
-    if (this._dayT >= 240) this._dayT = 0;
+    if (this._dayT >= 90) this._dayT = 0;
     const wasNight = this._isNight;
-    this._isNight  = this._dayT >= 120;
+    this._isNight  = this._dayT >= 45;
 
     if (this._isNight && !wasNight) {
       this._spawnZombies();
@@ -716,15 +728,17 @@ export class MinecraftScene {
       }
     }
 
-    this._hitCooldown = Math.max(0, this._hitCooldown - dt);
+    this._hitCooldown  = Math.max(0, this._hitCooldown  - dt);
+    this._playerAtkCd  = Math.max(0, this._playerAtkCd  - dt);
     this._updateClock();
 
     for (let i = this._npcs.length - 1; i >= 0; i--) {
       const npc = this._npcs[i];
       if (npc.hp <= 0) { this._onNpcDeath(npc); continue; }
 
-      npc.vy += 650 * dt;
-      npc.attackCd = Math.max(0, npc.attackCd - dt);
+      npc.vy       += 650 * dt;
+      npc.attackCd  = Math.max(0, npc.attackCd - dt);
+      npc.hitCd     = Math.max(0, npc.hitCd    - dt);
 
       if (npc.type === 'sheep')  this._aiSheep(npc, dt, px, py);
       else if (npc.type === 'zombie') this._aiZombie(npc, dt, px, py);
@@ -797,19 +811,16 @@ export class MinecraftScene {
   }
 
   _aiWolf(npc, dt, px, py) {
-    const dx = px - npc.x, dist = Math.hypot(px - npc.x, py - npc.y);
+    const dx = px - npc.x, dist = Math.hypot(dx, py - npc.y);
     if (!npc.tamed) {
-      if (dist < 160) {
-        npc.dir = px < npc.x ? 1 : -1;
-        npc.vx  = npc.dir * 110;
-      } else {
-        npc.wanderT += dt;
-        if (npc.wanderT > 3 + Math.random() * 2) {
-          npc.wanderT = 0; npc.wanderDir = Math.random() < 0.5 ? -1 : 1;
-          npc.vx = Math.random() < 0.35 ? 0 : npc.wanderDir * 55;
-        }
-        if (npc.vx !== 0) npc.dir = npc.vx < 0 ? -1 : 1;
+      // Neutral: just wander, faces player when close so player knows it's interactable
+      npc.wanderT += dt;
+      if (npc.wanderT > 3 + Math.random() * 2) {
+        npc.wanderT = 0; npc.wanderDir = Math.random() < 0.5 ? -1 : 1;
+        npc.vx = Math.random() < 0.4 ? 0 : npc.wanderDir * 45;
       }
+      if (dist < 120) npc.dir = dx > 0 ? 1 : -1; // face the player when nearby
+      else if (npc.vx !== 0) npc.dir = npc.vx < 0 ? -1 : 1;
     } else {
       const target = this._npcs.find(z =>
         z.type === 'zombie' && Math.abs(z.x - npc.x) < 320 && Math.abs(z.y - npc.y) < 120);
@@ -836,12 +847,17 @@ export class MinecraftScene {
   }
 
   _spawnZombies() {
+    const b = this._player?.body;
+    const pcx = b ? (b.x + 10) : WW * B / 2;
     const surfY = (wx) => {
-      for (let wy = 0; wy < WH; wy++) if (this._world[wy*WW+wx] !== 0) return wy * B - 22;
-      return SKY_H * B - 22;
+      const col = Math.max(0, Math.min(WW - 1, wx));
+      for (let wy = 0; wy < WH; wy++) if (this._world[wy*WW+col] !== 0) return wy * B - 20;
+      return SKY_H * B - 20;
     };
-    for (let i = 0; i < 3; i++) {
-      const wx = i < 2 ? 1 + i : WW - 2;
+    // Spawn on both sides of the player at 600-900px distance
+    const offsets = [-28, 28, -20];
+    for (const off of offsets) {
+      const wx = Math.max(2, Math.min(WW - 3, Math.floor(pcx / B) + off));
       this._makeNpc('zombie', wx * B + B/2, surfY(wx));
     }
   }
@@ -897,6 +913,31 @@ export class MinecraftScene {
     ).join('');
   }
 
+  // ── Find empty tile for block placement ────────────────────────
+  _findPlaceTile(cx, cy) {
+    if (this._mouseTarget) {
+      const { wx, wy } = this._mouseTarget;
+      // If target tile is empty, use it directly
+      if (this._world[wy*WW+wx] === 0) return { wx, wy };
+      // Tile is solid — find adjacent empty tile closest to player
+      const px = cx / B, py = cy / B;
+      const adj = [[wx-1,wy],[wx+1,wy],[wx,wy-1],[wx,wy+1]];
+      let best = null, bestDist = Infinity;
+      for (const [tx,ty] of adj) {
+        if (tx >= 0 && tx < WW && ty >= 0 && ty < WH && this._world[ty*WW+tx] === 0) {
+          const d = Math.abs(tx - px) + Math.abs(ty - py);
+          if (d < bestDist) { bestDist = d; best = { wx:tx, wy:ty }; }
+        }
+      }
+      return best;
+    }
+    // No mouse target: place in front of player
+    const tx = Math.floor((cx + this._dir * B * 1.5) / B);
+    const ty = Math.floor(cy / B);
+    if (tx >= 0 && tx < WW && ty >= 0 && ty < WH && this._world[ty*WW+tx] === 0) return { wx:tx, wy:ty };
+    return null;
+  }
+
   // ── Surface decorations (visual only, no collision) ────────────
   _buildDecorations() {
     for (let wx = 0; wx < WW; wx++) {
@@ -940,8 +981,8 @@ export class MinecraftScene {
   _updateClock() {
     if (!this._clockEl) return;
     const timeLeft = this._isNight
-      ? Math.ceil(240 - this._dayT)
-      : Math.ceil(120 - this._dayT);
+      ? Math.ceil(90  - this._dayT)
+      : Math.ceil(45  - this._dayT);
     this._clockEl.textContent = this._isNight ? `🌙 ${timeLeft}s` : `☀️ ${timeLeft}s`;
   }
 
@@ -986,7 +1027,7 @@ export class MinecraftScene {
     this._updateHUD();
     this._updateHP();
     this._updateClock();
-    this._msg('Clique esq=minerar  F=colocar  E=interagir  R=crafting  1-9=slot  ESC=sair');
+    this._msg('Esq=minerar/atacar  Dir=colocar  E=interagir NPC  R=crafting  1-9=slot');
   }
 
   _updateHUD() {
@@ -1108,6 +1149,23 @@ export class MinecraftScene {
       }
     }
 
+    // ── Attack NPC — check before mining ────────────────────────
+    if (mineTarget && this._playerAtkCd <= 0) {
+      const tx = mineTarget.wx * B + B/2, ty = mineTarget.wy * B + B/2;
+      for (const npc of this._npcs) {
+        if (Math.abs(npc.x - tx) < B * 1.6 && Math.abs(npc.y - ty) < B * 1.6) {
+          npc.hp -= 2;
+          npc.hitCd = 0.4;
+          this._playerAtkCd = 0.35;
+          const icon = npc.type === 'zombie' ? '🧟' : npc.type === 'sheep' ? '🐑' : '🐺';
+          this._msg(`${icon} Hit! ${Math.max(0,npc.hp)}/${npc.maxHp} HP`);
+          mineTarget = null;
+          this._mine = null;
+          break;
+        }
+      }
+    }
+
     if (mineTarget) {
       const { wx, wy } = mineTarget;
       const id = this._world[wy*WW+wx];
@@ -1140,25 +1198,21 @@ export class MinecraftScene {
       }
     }
 
-    // ── Place block — F key ──────────────────────────────────────
-    if (inp.justDown('KeyF') && this._placeCd <= 0) {
-      let placeWx, placeWy;
-      if (this._mouseTarget) {
-        placeWx = this._mouseTarget.wx;
-        placeWy = this._mouseTarget.wy;
-      } else {
-        placeWx = Math.floor((cx + this._dir * B * 1.5) / B);
-        placeWy = Math.floor(cy / B);
-      }
-      if (placeWx >= 0 && placeWx < WW && placeWy >= 0 && placeWy < WH && this._world[placeWy*WW+placeWx] === 0) {
+    // ── Place block — F key or right-click ───────────────────────
+    if ((inp.justDown('KeyF') || this._rmbJustDown) && this._placeCd <= 0) {
+      this._rmbJustDown = false;
+      const tile = this._findPlaceTile(cx, cy);
+      if (tile) {
         const slot = this._inv[this._hotbar];
         if (slot.qty > 0 && slot.id > 0) {
-          this._world[placeWy*WW+placeWx] = slot.id;
-          this._spawnBlockMesh(placeWx, placeWy, slot.id);
-          this._addStaticAt(placeWx, placeWy);
+          this._world[tile.wy*WW+tile.wx] = slot.id;
+          this._spawnBlockMesh(tile.wx, tile.wy, slot.id);
+          this._addStaticAt(tile.wx, tile.wy);
           this._removeItem(slot.id, 1);
           this._placeCd = 0.22;
-          if (this._net) this._net.socket.emit('mcBlockChange', { wx: placeWx, wy: placeWy, id: slot.id });
+          if (this._net) this._net.socket.emit('mcBlockChange', { wx: tile.wx, wy: tile.wy, id: slot.id });
+        } else {
+          this._msg('Selecione um bloco no hotbar (1-9)');
         }
       }
     }
@@ -1181,9 +1235,10 @@ export class MinecraftScene {
   destroy() {
     // Mouse handlers
     const canvas = this.e.renderer.domElement;
-    if (this._mh.onDown)  canvas.removeEventListener('mousedown', this._mh.onDown);
-    if (this._mh.onMove)  canvas.removeEventListener('mousemove', this._mh.onMove);
-    if (this._mh.onUp)    window.removeEventListener('mouseup',   this._mh.onUp);
+    if (this._mh.onDown)  canvas.removeEventListener('mousedown',   this._mh.onDown);
+    if (this._mh.onMove)  canvas.removeEventListener('mousemove',   this._mh.onMove);
+    if (this._mh.onCtx)   canvas.removeEventListener('contextmenu', this._mh.onCtx);
+    if (this._mh.onUp)    window.removeEventListener('mouseup',      this._mh.onUp);
 
     // Player sprite
     this._charSprite?.destroy();
