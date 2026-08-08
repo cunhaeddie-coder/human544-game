@@ -35,6 +35,7 @@ import { SnakeScene }     from './scenes/SnakeScene.js';
 import { ColorFloorScene }from './scenes/ColorFloorScene.js';
 import { MinecraftScene } from './scenes/MinecraftScene.js';
 import { HordeScene }    from './scenes/HordeScene.js';
+import { MirrorBossScene } from './scenes/MirrorBossScene.js';
 
 const engine  = new ThreeEngine();
 const input   = new Input();
@@ -65,6 +66,7 @@ manager.register('SnakeScene',     SnakeScene);
 manager.register('ColorFloorScene',ColorFloorScene);
 manager.register('MinecraftScene', MinecraftScene);
 manager.register('HordeScene',     HordeScene);
+manager.register('MirrorBossScene', MirrorBossScene);
 
 engine.start(dt => { manager.update(dt); input.flush(); });
 
