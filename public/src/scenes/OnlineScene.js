@@ -381,7 +381,7 @@ export class OnlineScene {
     const games = [
       { label: '⚽  Football', x: 200, bc: 0x0a1a05, hc: 0x0d3010, tc: 0x44ee88,
         action: () => this._buildVoteScreen(
-          [{ name: 'Arena Clássica' }, { name: 'Campo com Muros' }],
+          [{ name: 'Arena Clássica' }],
           'FootballScene'
         )
       },

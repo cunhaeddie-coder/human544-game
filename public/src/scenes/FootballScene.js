@@ -1,4 +1,4 @@
-// ── Football — Futebol Top-Down ──────────────────────────────────
+// ── Football — Futebol Top-Down (visão de transmissão / "golazo") ───
 // P1: A/D mover X  W/S mover Y  (toca na bola para chutar)
 // P2: J/L mover X  I/K mover Y
 // Primeiro a fazer 5 gols vence | ESC=voltar
@@ -13,14 +13,22 @@ const MAPS = [
     sky: 0x1a3a1a, grass: 0x2a6a2a, line: 0x4a9a4a,
     obstacles: [],
   },
-  {
-    name: 'Campo com Muros',
-    sky: 0x1a1a3a, grass: 0x223322, line: 0x336633,
-    obstacles: [
-      { x:380, y:340, w:20, h:120 },
-      { x:900, y:340, w:20, h:120 },
-    ],
-  },
+];
+
+// Seleções nacionais escolhíveis (cor da camisa / cor de detalhe)
+const TEAMS = [
+  { id:'bra', name:'Brasil',      flag:'🇧🇷', code:'BRA', shirt:'#ffcc00', trim:'#009c3b' },
+  { id:'arg', name:'Argentina',   flag:'🇦🇷', code:'ARG', shirt:'#75aadb', trim:'#ffffff' },
+  { id:'ger', name:'Alemanha',    flag:'🇩🇪', code:'GER', shirt:'#f5f5f5', trim:'#1a1a1a' },
+  { id:'fra', name:'França',      flag:'🇫🇷', code:'FRA', shirt:'#1e3a8a', trim:'#ffffff' },
+  { id:'por', name:'Portugal',    flag:'🇵🇹', code:'POR', shirt:'#c8102e', trim:'#046a38' },
+  { id:'esp', name:'Espanha',     flag:'🇪🇸', code:'ESP', shirt:'#c8102e', trim:'#ffcc00' },
+  { id:'ita', name:'Itália',      flag:'🇮🇹', code:'ITA', shirt:'#1565c0', trim:'#ffffff' },
+  { id:'ned', name:'Holanda',     flag:'🇳🇱', code:'NED', shirt:'#ff6f00', trim:'#ffffff' },
+  { id:'uru', name:'Uruguai',     flag:'🇺🇾', code:'URU', shirt:'#6ec8f2', trim:'#1a1a1a' },
+  { id:'bel', name:'Bélgica',     flag:'🇧🇪', code:'BEL', shirt:'#c8102e', trim:'#1a1a1a' },
+  { id:'cro', name:'Croácia',     flag:'🇭🇷', code:'CRO', shirt:'#c8102e', trim:'#ffffff' },
+  { id:'jpn', name:'Japão',       flag:'🇯🇵', code:'JPN', shirt:'#0a3b8c', trim:'#ffffff' },
 ];
 
 const BALL_R     = 20;
@@ -29,6 +37,119 @@ const PLAYER_SPD = 200;
 const KICK_FORCE = 700;
 const PLAYER_R   = 22;
 const PLAYER_FRICTION = 0.82; // decelera suavemente ao soltar teclas
+
+// ── Canvas art helpers (sprites sempre de frente pra câmera) ────────
+function lighten(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.min(255, Math.round(r + (255 - r) * amt));
+  g = Math.min(255, Math.round(g + (255 - g) * amt));
+  b = Math.min(255, Math.round(b + (255 - b) * amt));
+  return `rgb(${r},${g},${b})`;
+}
+
+function readableTextColor(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? '#111111' : '#ffffff';
+}
+
+function makeJerseyCanvas(team, number) {
+  const S = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  const cx = S / 2, cy = S / 2, r = S * 0.40;
+
+  // Sombra de contato (parte de baixo do círculo, dá volume)
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + r * 0.75, r * 0.75, r * 0.22, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fill();
+
+  // Camisa (gradiente radial pra dar volume esférico)
+  const grad = ctx.createRadialGradient(cx, cy - r * 0.35, r * 0.1, cx, cy, r);
+  grad.addColorStop(0, lighten(team.shirt, 0.4));
+  grad.addColorStop(1, team.shirt);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.lineWidth = S * 0.055;
+  ctx.strokeStyle = team.trim;
+  ctx.stroke();
+
+  // Gola em V
+  ctx.beginPath();
+  ctx.moveTo(cx - r * 0.30, cy - r * 0.55);
+  ctx.lineTo(cx, cy - r * 0.18);
+  ctx.lineTo(cx + r * 0.30, cy - r * 0.55);
+  ctx.strokeStyle = team.trim;
+  ctx.lineWidth = S * 0.04;
+  ctx.stroke();
+
+  // Número da camisa
+  ctx.fillStyle = readableTextColor(team.shirt);
+  ctx.font = `bold ${Math.round(S * 0.34)}px Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(number), cx, cy + S * 0.03);
+
+  // Indicador de direção (nariz) — aponta "pra cima" no canvas;
+  // a rotação em tempo real do sprite gira isso pra direção real.
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r - S * 0.015);
+  ctx.lineTo(cx - S * 0.06, cy - r + S * 0.10);
+  ctx.lineTo(cx + S * 0.06, cy - r + S * 0.10);
+  ctx.closePath();
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  return c;
+}
+
+function drawPolygon(ctx, x, y, r, sides, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < sides; i++) {
+    const a = rot + i * (Math.PI * 2 / sides);
+    const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function makeBallCanvas() {
+  const S = 96;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  const cx = S / 2, cy = S / 2, r = S * 0.46;
+
+  const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(1, '#d8d8d8');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = '#181818';
+  drawPolygon(ctx, cx, cy, r * 0.30, 5, -Math.PI / 2);
+  const ringR = r * 0.60;
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * (Math.PI * 2 / 5) + Math.PI / 5;
+    drawPolygon(ctx, cx + Math.cos(a) * ringR, cy + Math.sin(a) * ringR, r * 0.21, 5, a);
+  }
+  return c;
+}
 
 export class FootballScene {
   constructor(e, m, i) {
@@ -44,6 +165,9 @@ export class FootballScene {
     this._scoreSp = null;
     this._goalCd = 0;
     this._obstacles = [];
+    this._team0 = null;
+    this._team1 = null;
+    this._shadows = [];
   }
 
   _showRoulette(maps, onDone) {
@@ -80,14 +204,68 @@ export class FootballScene {
     requestAnimationFrame(tick);
   }
 
+  // Tela de escolha de seleção — clicável/tocável, consistente com o overlay da roleta de mapa.
+  _showTeamSelect(playerLabel, accent, excludeId, onDone) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:monospace;color:#fff;padding:20px;`;
+
+    const title = document.createElement('div');
+    title.style.cssText = `font-size:24px;margin-bottom:18px;color:${accent};text-shadow:0 0 8px ${accent};`;
+    title.textContent = `${playerLabel} — ESCOLHA SUA SELEÇÃO`;
+    overlay.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:720px;';
+    overlay.appendChild(grid);
+
+    TEAMS.forEach(team => {
+      const disabled = team.id === excludeId;
+      const btn = document.createElement('button');
+      btn.disabled = disabled;
+      btn.style.cssText = `
+        font-family:monospace;cursor:${disabled ? 'not-allowed' : 'pointer'};
+        display:flex;flex-direction:column;align-items:center;gap:6px;
+        padding:14px 8px;border-radius:10px;border:2px solid ${disabled ? '#333' : team.trim};
+        background:${disabled ? '#141414' : `linear-gradient(160deg, ${lighten(team.shirt, 0.15)}, ${team.shirt})`};
+        color:${disabled ? '#555' : readableTextColor(team.shirt)};
+        opacity:${disabled ? 0.4 : 1};font-size:13px;font-weight:bold;
+        transition:transform 0.1s;
+      `;
+      btn.innerHTML = `<span style="font-size:26px;">${team.flag}</span><span>${team.name}</span>`;
+      if (!disabled) {
+        btn.onmouseenter = () => btn.style.transform = 'scale(1.08)';
+        btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+        btn.onclick = () => { overlay.remove(); onDone(team); };
+      }
+      grid.appendChild(btn);
+    });
+
+    document.body.appendChild(overlay);
+  }
+
   create(data = {}) {
     if (data.map === undefined) {
+      if (MAPS.length === 1) { this.create({ ...data, map: 0 }); return; }
       this._showRoulette(MAPS, chosen => this.create({ ...data, map: chosen }));
       return;
     }
+    if (data.team0 === undefined) {
+      this._showTeamSelect('P1', '#4488ff', null, team => this.create({ ...data, team0: team.id }));
+      return;
+    }
+    if (data.team1 === undefined) {
+      this._showTeamSelect('P2', '#ff4444', data.team0, team => this.create({ ...data, team1: team.id }));
+      return;
+    }
+
     this._map = data.map;
     const map = MAPS[this._map];
+    this._team0 = TEAMS.find(t => t.id === data.team0) || TEAMS[0];
+    this._team1 = TEAMS.find(t => t.id === data.team1) || TEAMS[1];
     const E = this.e;
+
+    // Câmera inclinada estilo transmissão ("golazo") — só nesta cena.
+    E.setTilt(560, 360);
 
     this.physics.setGravity(0);
     this.physics.setWorldBounds(0, 1280, 9999);
@@ -98,6 +276,10 @@ export class FootballScene {
 
     // Field
     E.plane(1200, 500, map.grass, 640, 390, -10);
+    // Listras de grama cortada (visual)
+    for (let s = 0; s < 6; s++) {
+      E.plane(1200, 500 / 6, s % 2 === 0 ? lighten2(map.grass) : map.grass, 640, 140 + s * (500 / 6), -9, 0.35);
+    }
     // Center line
     E.box(4, 500, 2, map.line, 640, 390, -5);
     // Center circle
@@ -110,8 +292,8 @@ export class FootballScene {
     // Header
     E.plane(1280, 44, 0x000000, 640, 22, -390);
     E.text(map.name, 14, 0xffffff, 640, 22, 5);
-    E.text('P1: A/D W/S', 9, 0x4488ff, 120, 22, 5);
-    E.text('P2: J/L I/K', 9, 0xff4444, 1160, 22, 5);
+    E.text(`${this._team0.flag} ${this._team0.code} — A/D W/S`, 9, 0x4488ff, 130, 22, 5);
+    E.text(`${this._team1.flag} ${this._team1.code} — J/L I/K`, 9, 0xff4444, 1150, 22, 5);
     this._scoreSp = E.text('0 - 0', 20, 0xffffff, 640, 22, 8);
 
     // Paredes do campo (sem chão/teto de gravidade)
@@ -131,23 +313,36 @@ export class FootballScene {
       this._obstacles.push(o);
     });
 
-    // Ball
+    // Ball (sprite bonito + sombra, sempre de frente pra câmera mesmo com tilt)
     const bx = 640, by = 390;
     const ballBody = new Body(bx - BALL_R, by - BALL_R, BALL_R*2, BALL_R*2);
     ballBody.restitution = 0.75;
     this.physics.addBody(ballBody);
-    const ballMesh = E.box(BALL_R*2, BALL_R*2, BALL_R*2, 0xffffff, bx, by, 4);
-    ballMesh.material.emissive = new THREE.Color(0x222222);
-    ballMesh.material.emissiveIntensity = 0.3;
-    const pat = E.box(BALL_R*0.8, BALL_R*0.8, BALL_R*2+1, 0x111111, bx, by, 5);
-    this._ball = { body: ballBody, mesh: ballMesh, pat, friction: 0.96 };
+    const ballShadow = this._makeShadow(bx, by, BALL_R * 1.1);
+    const ballTex = new THREE.CanvasTexture(makeBallCanvas());
+    const ballSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: ballTex, transparent: true }));
+    ballSprite.scale.set(BALL_R * 2.4, BALL_R * 2.4, 1);
+    ballSprite.position.set(bx, -by, 6);
+    this.e.scene.add(ballSprite);
+    this._ball = { body: ballBody, sprite: ballSprite, shadow: ballShadow, friction: 0.96, spin: 0 };
 
     // Players
-    this._spawnPlayer(0, 300, 390, 0x4488ff);
-    this._spawnPlayer(1, 980, 390, 0xff4444);
+    this._spawnPlayer(0, 300, 390, this._team0);
+    this._spawnPlayer(1, 980, 390, this._team1);
 
     this._state = 'playing';
     this._showMsg('APITO INICIAL!', 1500);
+  }
+
+  _makeShadow(x, y, r) {
+    const geo = new THREE.CircleGeometry(r, 20);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.scale.set(1, 0.6, 1);
+    mesh.position.set(x, -y, 3);
+    this.e.scene.add(mesh);
+    this._shadows.push(mesh);
+    return mesh;
   }
 
   _buildGoal(E, side) {
@@ -165,23 +360,19 @@ export class FootballScene {
     }
   }
 
-  _spawnPlayer(idx, x, y, color) {
+  _spawnPlayer(idx, x, y, team) {
     const body = new Body(x - PLAYER_R, y - PLAYER_R, PLAYER_R*2, PLAYER_R*2);
     this.physics.addBody(body);
 
-    // Corpo principal do jogador (dois círculos simulados com boxes escalonadas)
-    const circle = this.e.box(PLAYER_R*2, PLAYER_R*2, PLAYER_R*2, color, x, y, 4);
-    circle.material.emissive = new THREE.Color(color);
-    circle.material.emissiveIntensity = 0.3;
-    // Camisa / número
-    const inner = this.e.box(PLAYER_R*0.9, PLAYER_R*0.9, PLAYER_R*2+1, 0xffffff, x, y, 5);
-    inner.material.transparent = true; inner.material.opacity = 0.25;
-    // Nariz de direção
-    const nose = this.e.box(8, 8, 12, 0xffffff, x + (idx === 0 ? PLAYER_R : -PLAYER_R), y, 5);
-    nose.material.emissive = new THREE.Color(0xffffff); nose.material.emissiveIntensity = 0.5;
+    const shadow = this._makeShadow(x, y, PLAYER_R * 1.15);
+    const tex = new THREE.CanvasTexture(makeJerseyCanvas(team, idx + 1));
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    sprite.scale.set(PLAYER_R * 2.6, PLAYER_R * 2.6, 1);
+    sprite.position.set(x, -y, 6);
+    this.e.scene.add(sprite);
 
     this._players[idx] = {
-      idx, body, circle, inner, nose, color,
+      idx, body, sprite, shadow, team,
       dirX: idx === 0 ? 1 : -1, dirY: 0,
       moving: false,
     };
@@ -206,10 +397,10 @@ export class FootballScene {
       b.vy *= PLAYER_FRICTION;
     }
 
-    // Sincronizar meshes
-    p.circle.position.set(b.cx, -b.cy, 4);
-    p.inner.position.set(b.cx, -b.cy, 5);
-    p.nose.position.set(b.cx + p.dirX * PLAYER_R, -(b.cy + p.dirY * PLAYER_R), 5);
+    // Sincronizar sprite + sombra (sprite sempre de frente pra câmera, mesmo com tilt)
+    p.sprite.position.set(b.cx, -b.cy, 6);
+    p.sprite.material.rotation = Math.atan2(-p.dirX, -p.dirY);
+    p.shadow.position.set(b.cx, -b.cy, 3);
 
     // Colisão circular com a bola — separação e transferência de momentum
     const ball = this._ball;
@@ -254,15 +445,15 @@ export class FootballScene {
     this._score[scorer]++;
     this.e.remove(this._scoreSp);
     this._scoreSp = this.e.text(`${this._score[0]} - ${this._score[1]}`, 20, 0xffffff, 640, 22, 8);
-    const name = scorer === 0 ? 'P1' : 'P2';
-    this._showMsg(`GOOOL! ${name}!`, 2000);
+    const team = scorer === 0 ? this._team0 : this._team1;
+    this._showMsg(`GOOOL! ${team.flag} ${team.name}!`, 2000);
     this._goalCd = 2.2;
 
     if (this._score[scorer] >= 5) {
       this._state = 'gameover';
       const totalGoals = this._score[0] + this._score[1];
       SaveSystem.recordScore('football', this._score[scorer] * 100 + totalGoals);
-      this._showMsg(`${name} VENCEU!\nENTER para voltar`, 0);
+      this._showMsg(`${team.flag} ${team.name} VENCEU!\nENTER para voltar`, 0);
       return;
     }
 
@@ -312,22 +503,40 @@ export class FootballScene {
     if (ball.body.y < 135)         { ball.body.y = 135; ball.body.vy = Math.abs(ball.body.vy) * REST; }
     if (ball.body.bottom > 645)    { ball.body.y = 645 - BALL_R*2; ball.body.vy = -Math.abs(ball.body.vy) * REST; }
 
-    ball.mesh.position.set(ball.body.cx, -ball.body.cy, 4);
-    ball.pat.position.set(ball.body.cx, -ball.body.cy, 5);
+    const spd = Math.hypot(ball.body.vx, ball.body.vy);
+    ball.spin += spd * dt * 0.012;
+    ball.sprite.position.set(ball.body.cx, -ball.body.cy, 6);
+    ball.sprite.material.rotation = ball.spin;
+    ball.shadow.position.set(ball.body.cx, -ball.body.cy, 3);
 
     if (this._goalCd <= 0) this._checkGoal();
 
     if (this.inp.justDown('Escape')) this.m.start('LeisureScene');
     if (this.inp.justDown('Tab')) {
-      this.m.start('FootballScene', { map: (this._map + 1) % MAPS.length });
+      this.m.start('FootballScene', {
+        map: (this._map + 1) % MAPS.length,
+        team0: this._team0.id,
+        team1: this._team1.id,
+      });
     }
   }
 
   destroy() {
     this._players.forEach(p => {
       if (!p) return;
-      this.e.remove(p.inner);
+      this.e.remove(p.sprite);
     });
+    this._shadows.forEach(s => this.e.remove(s));
+    this._shadows = [];
+    if (this._ball) this.e.remove(this._ball.sprite);
+    this.e.resetTilt();
     this.physics.clear();
   }
+}
+
+function lighten2(hex) {
+  const n = typeof hex === 'number' ? hex : parseInt(String(hex).replace('#', ''), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.min(255, r + 18); g = Math.min(255, g + 18); b = Math.min(255, b + 18);
+  return (r << 16) | (g << 8) | b;
 }
