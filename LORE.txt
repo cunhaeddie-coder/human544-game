@@ -312,8 +312,14 @@ no nome do jogo.
   [ ] Fase 5 — Modo Caos + Modo 544 Segundos
   [ ] Fase 6 — Sistema de Testes por fase (3 testes/fase)
   [ ] Fase 7 — Final ramificado (544 vs 000, loops de replay 2ª-6ª zerada)
-  [ ] Fase 8 — Eventos aleatórios no hub, multiplayer com eventos, rankings
-              expandidos, carreiras Futebol/Corrida, Minecraft com lore
+  [x] Fase 8 (parcial) — Rankings expandidos — 2026-08-08. RankingScene
+      ganhou aba "LABORATÓRIO" com 4 categorias meta que usam stat real
+      já rastreado: 🏆 Survivor (fase máxima), 💀 Killer (kills, Enemy.js
+      já incrementa), 💰 Collector (moedas em caixa), ❤ Human (Humanidade).
+      Faltam: Speedrunner, Genius (testes), Chaos, 544-geral — nenhum
+      desses tem stat rastreado hoje, precisam de hooks novos primeiro.
+  [ ] Fase 8 (resto) — Eventos aleatórios no hub, multiplayer com eventos,
+              carreiras Futebol/Corrida, Minecraft com lore
 
 Cada fase é um trabalho real e jogável por si só — não um placeholder.
 Retomar a partir daqui: pedir "Fase N" ou descrever o pedaço específico.

@@ -19,6 +19,16 @@ const GAME_LABELS = {
   colorfloor: 'Piso Colorido',
 };
 
+// Rankings "meta" — usam stat que já é rastreado de verdade em algum
+// lugar do jogo (não é decorativo). Ver LORE.txt Fase 8 pra categorias
+// que ainda faltam ligar (Speedrunner, Genius, Chaos, 544 geral).
+const META_RANKINGS = [
+  { key:'survivor', icon:'🏆', label:'Survivor',  desc:'Fase mais avançada', get:() => SaveSystem.getMaxPhase(), fmt:v => `Fase ${v}` },
+  { key:'killer',   icon:'💀', label:'Killer',    desc:'Inimigos derrotados', get:() => SaveSystem.getStat('kills'), fmt:v => `${v}` },
+  { key:'collector',icon:'💰', label:'Collector', desc:'Moedas em caixa',    get:() => SaveSystem.getCoins(), fmt:v => `${v}` },
+  { key:'human',    icon:'❤',  label:'Human',     desc:'Humanidade',        get:() => SaveSystem.getHumanity(), fmt:v => `${v}% — ${SaveSystem.getHumanityLabel(v)}` },
+];
+
 export class RankingScene {
   constructor(e, m, i) {
     this.e   = e;
@@ -27,9 +37,12 @@ export class RankingScene {
     this._btns        = [];
     this._clickHandler = null;
     this._moveHandler  = null;
+    this._tab = 'games'; // 'games' | 'meta'
   }
 
-  create() {
+  create(data = {}) {
+    this._tab = data.tab || 'games';
+    this._btns = [];
     const E = this.e;
 
     // ── Fundo ──────────────────────────────────────────────────
@@ -51,6 +64,44 @@ export class RankingScene {
       action: () => this.m.start('ModeScene'),
     });
 
+    // ── Abas ─────────────────────────────────────────────────────
+    const tabs = [ { key:'games', label:'MINIJOGOS' }, { key:'meta', label:'LABORATÓRIO' } ];
+    tabs.forEach((t, i) => {
+      const tx = 1080 + i * 150;
+      const active = this._tab === t.key;
+      const tbox = E.box(140, 36, 12, active ? 0x1a2a55 : 0x0a0f22, tx, 36, 10);
+      E.text(t.label, 11, active ? 0x88bbff : 0x445577, tx, 36, 20);
+      this._btns.push({ gx: tx, gy: 36, w: 140, h: 36, box: tbox, baseColor: active ? 0x1a2a55 : 0x0a0f22,
+        action: () => this.m.start('RankingScene', { tab: t.key }) });
+    });
+
+    if (this._tab === 'meta') this._renderMeta(E);
+    else this._renderGames(E);
+
+    // ── Dica de teclado ────────────────────────────────────────
+    E.text('ESC: Voltar', 11, 0x1a2233, 640, 695, 10);
+
+    this._setupMouse();
+  }
+
+  _renderMeta(E){
+    E.plane(900, 30, 0x0d1230, 640, 110, -5);
+    E.text('CATEGORIA', 14, 0x3366aa, 380, 110, 15);
+    E.text('VALOR', 14, 0x3366aa, 800, 110, 15);
+    E.plane(900, 1, 0x1a2a55, 640, 126, 8);
+
+    const startY = 160, rowHeight = 70;
+    META_RANKINGS.forEach((r, idx) => {
+      const rowY = startY + idx * rowHeight;
+      const bgCol = idx % 2 === 0 ? 0x070b1a : 0x090d20;
+      E.plane(900, rowHeight - 6, bgCol, 640, rowY, -8);
+      E.text(`${r.icon} ${r.label}`, 16, 0x88aacc, 340, rowY - 12, 15);
+      E.text(r.desc, 10, 0x445577, 340, rowY + 12, 15);
+      E.text(r.fmt(r.get()), 18, 0x44ee88, 800, rowY, 15);
+    });
+  }
+
+  _renderGames(E){
     // ── Busca rankings ─────────────────────────────────────────
     const rankings = SaveSystem.getAllRankings();
 
@@ -106,11 +157,6 @@ export class RankingScene {
         11, 0x223344, 640, totalY, 15,
       );
     }
-
-    // ── Dica de teclado ────────────────────────────────────────
-    E.text('ESC: Voltar', 11, 0x1a2233, 640, 695, 10);
-
-    this._setupMouse();
   }
 
   // ── Mouse ───────────────────────────────────────────────────────
