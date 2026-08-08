@@ -11,7 +11,7 @@
   Frontend : Three.js 0.184 (motor 3D via CDN) + Web Audio API (sons sintéticos)
   Backend  : Node.js 24 + Express 5 + Socket.io 4.8
   Storage  : localStorage (SaveSystem — sem banco de dados)
-  Deploy   : Railway (https://human544-game-production.up.railway.app)
+  Deploy   : Render (https://human544-game.onrender.com)
   GitHub   : https://github.com/cunhaeddie-coder/human544-game
   Dev local: npm start (porta 3000) | npm run dev (watch mode)
   Ngrok    : C:\Users\Edimar'\Downloads\ngrok-v3-stable-windows-amd64\ngrok.exe http 3000
@@ -189,20 +189,23 @@ PlatformerGame/
 
   INFRAESTRUTURA
   --------------
-  Plataforma : Railway (railway.app) — plano gratuito (500h/mês)
+  Plataforma : Render (render.com) — plano free (srv-d9r7mqijnfac73f3jcl0)
   GitHub     : https://github.com/cunhaeddie-coder/human544-game
-  URL pública: https://human544-game-production.up.railway.app
-  Trigger    : push no branch master → deploy automático (~1 min)
+  URL pública: https://human544-game.onrender.com
+  Trigger    : push no branch master → deploy automático (~1-2 min)
+  Owner      : Edimar's workspace (tea-d9r7l7ifngtc73cp0pq0), conta cunha.eddie@gmail.com
 
   COMO O DEPLOY FUNCIONA
   ----------------------
-  1. Railway monitora o repositório GitHub (cunhaeddie-coder/human544-game)
-  2. A cada `git push`, Railway inicia um novo build automaticamente
+  1. Render monitora o repositório GitHub (cunhaeddie-coder/human544-game)
+  2. A cada `git push` no master, Render inicia um novo build automaticamente
   3. Build: instala dependências com `npm install` (via package.json)
   4. Start: executa `npm start` → `node server.js`
-  5. Railway injeta a variável de ambiente PORT automaticamente
+  5. Render injeta a variável de ambiente PORT automaticamente
      (server.js usa: const PORT = process.env.PORT || 3000)
   6. URL pública permanece a mesma após cada redeploy
+  7. Plano free "dorme" após ~15 min sem acesso — primeiro request depois
+     disso demora alguns segundos pra "acordar" o serviço (cold start)
 
   PUBLICAR UMA ATUALIZAÇÃO
   ------------------------
@@ -210,7 +213,7 @@ PlatformerGame/
     git add .
     git commit -m "descrição da mudança"
     git push
-  → Aguardar ~1 minuto → acessar a URL pública para verificar
+  → Aguardar ~1-2 minutos → acessar a URL pública para verificar
 
   PRIMEIRO DEPLOY (se precisar refazer do zero)
   ----------------------------------------------
@@ -221,18 +224,28 @@ PlatformerGame/
        git commit -m "inicial"
        git remote add origin https://github.com/SEU_USUARIO/REPO.git
        git push -u origin master
-  3. Em railway.app:
-       → New Project → Deploy from GitHub repo
-       → Selecionar o repositório
-       → Deploy Now
+  3. Em render.com (ou via API com uma API key de Account Settings → API Keys):
+       → New → Web Service → conectar o repositório GitHub
+       → Environment: Node | Build: npm install | Start: npm start | Plan: Free
+       → Create Web Service
   4. Após o build:
-       → Settings → Networking → Generate Domain
-       → Copiar a URL gerada
+       → URL pública fica em https://<nome-do-serviço>.onrender.com
 
-  VARIÁVEIS DE AMBIENTE NO RAILWAY (se necessário)
+  VARIÁVEIS DE AMBIENTE NO RENDER (se necessário)
   -------------------------------------------------
-  Settings → Variables → Add Variable
+  Dashboard do serviço → Environment → Add Environment Variable
   Exemplo: NODE_ENV = production
+
+  HISTÓRICO DE INFRA
+  -------------------
+  - Deploy original: Railway (railway.app), projeto "peaceful-transformation".
+    Caiu offline em 2026-08 porque o trial da conta Railway expirou (bloqueio
+    de billing, não bug de código). Serviço Railway ainda existe mas parado
+    aguardando escolha de plano pago — não foi deletado.
+  - Migrado para Render em 2026-08-07 (mesmo repo, auto-deploy idêntico,
+    sem depender de cartão/billing).
+  - Cogitado (e descartado) usar domínio próprio jogo.sistematraderelite.com.br
+    — decidiu-se manter a URL padrão do Render por simplicidade.
 
   RODAR LOCAL (desenvolvimento)
   -----------------------------
@@ -285,6 +298,15 @@ PlatformerGame/
     - PVP online com sync de posição/balas via Socket.io
     - Kill sync online: morte de inimigo propagada para todos na sala
     - Deploy no Railway com URL pública permanente
+
+  Sessão 4 — Migração de deploy Railway → Render (2026-08-07)
+    - Projeto Railway achado offline: trial da conta expirado (billing),
+      não bug de código. Serviço Railway preservado, só não recebe redeploy.
+    - Novo Web Service criado no Render (free) linkado ao mesmo repo GitHub,
+      auto-deploy no push do master igual ao workflow anterior.
+    - Nova URL pública: https://human544-game.onrender.com
+    - Domínio próprio (jogo.sistematraderelite.com.br) cogitado e descartado
+      — ficou só na URL padrão do Render.
 
 
 ================================================================================
