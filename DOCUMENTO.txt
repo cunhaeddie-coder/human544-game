@@ -3,6 +3,12 @@
   Atualizado em: 2026-05-17
 ================================================================================
 
+  Ver também LORE.txt — visão de universo/narrativa (Laboratório 544,
+  Sistema de Humanidade, HUMAN 545/000, bosses reescritos, modos novos).
+  Este arquivo (DOCUMENTO.txt) é a fonte de verdade TÉCNICA; LORE.txt é
+  a fonte de verdade NARRATIVA. Roadmap de implementação por fases no
+  fim do LORE.txt.
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   STACK TECNOLÓGICA
@@ -348,6 +354,18 @@ PlatformerGame/
       fluxo Menu → Garagem (3 carros com física real) → Corrida → Pausa/Game
       Over, rolagem infinita com curva falsa, tráfego com IA de troca de
       faixa, moedas/combustível, sistema de partículas, HUD em DOM.
+
+  Sessão 6 — Início da visão de universo (2026-08-08)
+    - LORE.txt criado: documento completo de narrativa/lore (Laboratório
+      544 como hub, Sistema de Humanidade, HUMAN 545/000, bosses
+      reescritos, Modo Caos, 544 Segundos, sistema de testes, final
+      ramificado com loops de replay). Roadmap em 8 fases, só a Fase 0
+      (doc) e Fase 1 concluídas até agora.
+    - Sistema de Humanidade v1 implementado de verdade: SaveSystem
+      ganha getHumanity/addHumanity/getHumanityLabel (0-100, persistente).
+      Dançar (+2), taunt (+1) e Código Konami (+3) dão Humanidade, com
+      cooldown de 6s por gatilho pra não virar farm. Mostrado no HUD da
+      campanha (#hud-humanity) como "HUMANITY: XX% — LABEL".
 
   IMPORTANTE — deploy manual obrigatório
   ---------------------------------------

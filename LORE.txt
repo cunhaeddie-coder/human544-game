@@ -1,0 +1,314 @@
+================================================================================
+  HUMAN 544 — DOCUMENTO DE LORE E VISÃO DE UNIVERSO
+  Criado em: 2026-08-08
+================================================================================
+
+Este documento existe pra dar uma "cola" narrativa que conecta os 12
+minijogos, a campanha, os modos multiplayer e o Minecraft — em vez deles
+parecerem uma coleção aleatória de coisas, tudo é um TESTE dentro do
+mesmo universo. É o roadmap completo da visão; a implementação acontece
+em fases (ver STATUS DE IMPLEMENTAÇÃO no fim).
+
+Este arquivo é FONTE DE VERDADE pra lore/narrativa. DOCUMENTO.txt continua
+sendo a fonte de verdade técnica (stack, deploy, estrutura de arquivos).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PREMISSA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O jogador é o HUMAN 544, um experimento de laboratório que deveria ter
+sido descartado. Cada fase, boss, minijogo e modo é um TESTE diferente
+pra descobrir se ele é realmente humano.
+
+  Platformer (50 fases) → testes de sobrevivência
+  Bosses                → experimentos especiais
+  PVP                   → testes entre humanos
+  Horda                 → contenção
+  Minecraft             → mundo experimental (ver seção própria)
+  Futebol               → teste de competição
+  Corrida               → teste de reflexos
+  Snake                 → teste cognitivo
+  Sumo                  → teste de força
+  (demais minijogos seguem o mesmo molde — testes específicos)
+
+Mensagens de teste (telas de transição, boss intro, resultado de fase):
+  "TESTE 017 — REFLEXOS"
+  "RESULTADO: HUMANIDADE QUESTIONÁVEL"
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LABORATÓRIO 544 — HUB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Em vez de menu tradicional (ModeScene atual), o jogador anda por um
+laboratório. Cada porta leva a uma categoria — os mesmos 12 minijogos +
+campanha + multiplayer de sempre, só que organizados narrativamente:
+
+  CAMPO DE TESTES   → Campanha (50 fases), Bosses, Horda
+  ÁREA ESPORTIVA    → Futebol, Corrida, Sumo
+  LABORATÓRIO       → Snake, Breakout, Targets, ColorFloor
+  ÁREA PROIBIDA     → Minecraft, PVP, Boss Raid
+
+Algumas portas começam bloqueadas (ex: Área Proibida só libera depois de
+completar X testes) — dá progressão sem precisar de conteúdo novo.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SISTEMA DE HUMANIDADE  [IMPLEMENTADO — v1, 2026-08-08]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Stat persistente 0-100 (começa em 70), guardada em SaveSystem.getHumanity()
+/ addHumanity(delta) / getHumanityLabel(). Mostrada no HUD da campanha
+(GameScene) como "HUMANITY: XX% — LABEL".
+
+  80-100%  HUMAN        (verde)
+  50-79%   UNSTABLE     (amarelo)
+  20-49%   EXPERIMENT   (laranja)
+  0-19%    UNKNOWN      (vermelho)
+
+Gatilhos ativos hoje (em Player.js, com cooldown pra não virar farm):
+  💃 Dançar (T)         → +2  (cooldown 6s)
+  😂 Taunt (B)           → +1  (cooldown 6s)
+  🎮 Código Konami       → +3  (sem cooldown — já é raro de executar)
+
+Gatilhos negativos ainda NÃO implementados (addHumanity já aceita delta
+negativo, é só chamar de onde fizer sentido depois — ver FASES FUTURAS):
+  😈 Matar inimigos "desnecessariamente" — precisa definir a regra primeiro
+     (o jogo é um shooter, matar é o loop principal; não dá pra punir
+     todo kill sem quebrar a diversão — precisa de um critério melhor,
+     tipo "matar inimigo neutro/já derrotado" ou "civil", não qualquer kill)
+  💀 Abandonar parceiro (coop local) — precisa de detecção de "P2 sozinho
+     longe/sem ajuda", não existe hoje
+  🎮 Morte do jogador — candidato mais simples de implementar a seguir
+
+Efeitos da Humanidade no jogo: AINDA NÃO IMPLEMENTADOS (hoje é só
+display). Ideias da fase futura: pequenas mudanças cosméticas/mecânicas
+por faixa (ex: diálogo de NPC muda, cor do sprite, acesso a áreas).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  BOSSES REESCRITOS — mecânicas quebrando a regra padrão
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ideia: cada boss (dos 10 já existentes OU novos) ter uma mecânica
+radicalmente diferente da fórmula padrão "atira e persegue":
+
+  THE WALL   — não anda, é literalmente uma parede gigante; o jogador
+               precisa subir enquanto ela tenta esmagá-lo
+  MIRROR     — copia os movimentos do jogador (pula quando ele pula,
+               atira quando ele atira) — luta de comportamento/timing
+  GLITCH     — a arena "buga" de propósito: gravidade invertida,
+               controles trocados, plataformas somem, câmera invertida,
+               velocidade alterada — tudo alternando durante a luta
+  544 (o próprio HUMAN 544) — copia o personagem do jogador (skin,
+               arma, habilidade) — espelho literal do jogador
+
+Os 10 bosses atuais (BossRobot, BossDragon, BossPhoenix, BossLich,
+BossGolem, BossHydra, BossVoid, BossTitan, BossOmega x2) já têm mecânicas
+próprias — decisão pendente: reescrever os existentes pra esse molde
+narrativo, ou introduzir esses 4 como NOVOS bosses extras/secretos.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  HUMAN 545 — RIVAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Outro experimento do laboratório. Acredita que "humanos são um erro" e
+quer destruir o laboratório e eliminar todos os experimentos. Aparece
+DURANTE várias fases (não só no final) — às vezes ajuda, às vezes
+atrapalha, às vezes rouba um power-up do jogador.
+
+NPCs escondidos pelo mapa dão pistas antes dele aparecer de verdade:
+  "Você é o 544?"
+  "Não confie no número 545."
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  FINAL — plot twist e loops de replay
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Depois das 50 fases, o jogador acha que derrotou o boss final. Tela preta.
+  "TEST COMPLETE"
+  "SUBJECT 544: APPROVED"
+  (pausa)
+  "INITIATING NEXT EXPERIMENT"
+  → aparece HUMAN 545
+
+Plot twist: 545 NÃO é o vilão — ele estava tentando impedir que o
+laboratório ativasse HUMAN 000.
+
+  000 chega quebrando o laboratório. Não fala nada. Manda os monstros e
+  ataques mais fortes do jogo, sendo quase imortal.
+  544 e 545 se juntam pra derrotar 000. 545 morre na luta.
+  544, com raiva, usa sua arma mais forte: O SAPO — tira do bolso, o sapo
+  come o 000, a luta acaba.
+  A alma de 545 sai do corpo... e volta. Ele revive.
+  Tela preta: "YOU WIN" (grafado "you yim" no rascunho original — manter
+  como easter egg de erro de digitação proposital, ou corrigir — decisão
+  de produto pendente).
+  Aparece: "Agora o mundo está em paz."
+  Cena final: 544 brincando com o cachorro.
+
+LOOP DE REPLAY (zerar o jogo de novo):
+  2ª zerada  → aparece HUMAN 001, que é IMORTAL. 544 morre. 545 se
+              sacrifica. 544 revive, mas 545 NÃO revive dessa vez.
+  Até a 6ª zerada → o player é lançado pra lua e vive uma vida normal lá.
+
+  (a progressão entre a 2ª e a 6ª zerada — o que muda em cada uma — ainda
+  não foi detalhada; precisa de mais uma rodada de design antes de
+  implementar)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MODOS NOVOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  MODO CAOS (pós-campanha)
+  -------------------------
+  Cada partida recebe modificadores aleatórios: gravidade 50%, inimigos
+  2x, velocidade 150%, câmera invertida, moedas 3x, "todos os inimigos
+  são bosses", etc. Combina modificadores por partida pra variedade.
+
+  544 SEGUNDOS
+  -------------
+  Sequência de desafios misturando platformer → corrida → futebol →
+  boss → horda → minigame, SEM voltar ao menu, com exatamente 544
+  segundos no relógio. Medalhas por tempo: 🥉 Bronze / 🥈 Silver /
+  🥇 Gold / 💎 544. Candidato a ranking mundial (precisa de backend —
+  hoje é tudo localStorage, ver DOCUMENTO.txt).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SISTEMA DE TESTES (por fase)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada fase ganha 3 testes opcionais além de completar, ex:
+  🏁 Completar fase
+  ⭐ Não sofrer dano
+  💰 Coletar 100% das moedas
+E desafios mais malucos: terminar sem atirar, terminar em <60s, matar só
+o boss, não tocar no chão, terminar usando 1 habilidade só. Multiplica a
+rejogabilidade sem precisar de fases novas.
+
+Nota técnica: ShopData.js já tem vários `stat:` de missão (ex:
+nodamagePhases, speedrunPhase1) que NUNCA são incrementados em lugar
+nenhum do código hoje — são placeholders órfãos. Antes de expandir o
+sistema de testes, vale auditar e conectar (ou remover) esses stats.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  EVENTOS ALEATÓRIOS NO HUB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Enquanto o jogador está no Laboratório 544, coisas podem acontecer:
+  🚨 "FALHA DE CONTENÇÃO" — luzes vermelhas, inimigo invade o laboratório
+  "HUMAN 545 DETECTED" — vira uma perseguição
+Faz o hub parecer vivo em vez de um menu estático.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  EXPANSÕES DE MINIJOGO ("carreiras")
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FUTEBOL: Copa HUMAN com as 12 seleções já implementadas, torneio,
+    pênaltis, partidas especiais (chuva, campo congelado, campo pequeno,
+    2v2, modo goleiro).
+  CORRIDA: campeonato com upgrades de carro, carros desbloqueáveis,
+    pistas temáticas, polícia perseguindo, nitro, variantes chuva/noite,
+    chefe/rival de pista.
+
+  (ambos os minijogos-base já existem e têm estrutura — ver DOCUMENTO.txt
+  seções FUTEBOL e CORRIDA — essas são evoluções em cima do que já roda.)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MINECRAFT COMO "EXPERIMENT 3D" (mundo secreto com lore)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O modo Minecraft (hoje já existe, engine 3D à parte — ver ThreeEngine3D.js)
+deixa de ser "só mais um minijogo" e vira uma porta no Laboratório pra um
+mundo completamente diferente, com estruturas escondidas que revelam a
+história: uma estrutura abandonada escrita "544", outra "545", uma
+terceira "000". Camada de exploração/lore, não muda a mecânica voxel.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MULTIPLAYER COM EVENTOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  WEEKEND CHAOS — todo mundo joga Boss Raid com 10.000 HP, cada jogador
+    causa dano ao total (precisa de estado compartilhado entre salas —
+    hoje o Socket.io é por sala isolada, isso exigiria um "canal global").
+  GLOBAL HUNT — um inimigo aparece em todas as salas simultaneamente,
+    cada vitória soma pontos a um contador global.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  RANKINGS EXPANDIDOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🏆 Survivor      — fases completadas
+  💀 Killer        — inimigos derrotados
+  ⚡ Speedrunner   — menor tempo
+  💰 Collector     — moedas
+  🧠 Genius        — desafios (testes) completados
+  😂 Chaos         — mortes absurdas
+  ❤ Human         — Humanidade
+  👑 544           — ranking geral (combina os outros)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MAPA DA VISÃO COMPLETA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                      HUMAN 544
+                          │
+                   LABORATÓRIO 544
+                          │
+          ┌───────────────┼───────────────┐
+          │               │               │
+       CAMPANHA        ARCADE         MULTIPLAYER
+          │               │               │
+      50 FASES        12 JOGOS       PVP / COOP
+          │               │               │
+      10 BOSSES       RANKINGS          RAID
+          │               │               │
+          └───────────────┼───────────────┘
+                          │
+                     EXPERIMENTOS
+                          │
+                   MINECRAFT 3D
+                          │
+                    HUMAN 545
+                          │
+                    HUMAN 000
+
+Princípio norteador: o jogador não está jogando 12 jogos diferentes — ele
+está passando pelos 12 testes do HUMAN 544. Não é sobre adicionar mais
+conteúdo aleatório; é sobre a "cola" narrativa que já existe em potencial
+no nome do jogo.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  STATUS DE IMPLEMENTAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [x] Fase 0 — este documento (lore completo registrado)
+  [x] Fase 1 — Sistema de Humanidade v1 (stat + 3 gatilhos + HUD) — 2026-08-08
+  [ ] Fase 2 — Laboratório 544 (hub navegável substituindo/estendendo ModeScene)
+  [ ] Fase 3 — Bosses reescritos (THE WALL, MIRROR, GLITCH, 544)
+  [ ] Fase 4 — HUMAN 545 (aparições em fase + NPCs escondidos com pistas)
+  [ ] Fase 5 — Modo Caos + Modo 544 Segundos
+  [ ] Fase 6 — Sistema de Testes por fase (3 testes/fase)
+  [ ] Fase 7 — Final ramificado (544 vs 000, loops de replay 2ª-6ª zerada)
+  [ ] Fase 8 — Eventos aleatórios no hub, multiplayer com eventos, rankings
+              expandidos, carreiras Futebol/Corrida, Minecraft com lore
+
+Cada fase é um trabalho real e jogável por si só — não um placeholder.
+Retomar a partir daqui: pedir "Fase N" ou descrever o pedaço específico.
+
+
+================================================================================
+  FIM DO DOCUMENTO
+================================================================================

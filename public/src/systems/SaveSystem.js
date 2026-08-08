@@ -136,6 +136,23 @@ export const SaveSystem = {
     return bonuses[stat] || 0;
   },
 
+  // ── Humanidade (0-100, começa em 70) ────────────────────────
+  // Sobe com ações "humanas" (dançar, zoar, usar o Konami). Fica
+  // pronto pra receber gatilhos negativos no futuro — addHumanity
+  // aceita delta negativo, só ninguém chama com valor negativo ainda.
+  getHumanity()      { return this.get('humanity', 70); },
+  addHumanity(delta) {
+    const v = Math.max(0, Math.min(100, this.getHumanity() + delta));
+    this.set('humanity', v);
+    return v;
+  },
+  getHumanityLabel(v = this.getHumanity()) {
+    if (v >= 80) return 'HUMAN';
+    if (v >= 50) return 'UNSTABLE';
+    if (v >= 20) return 'EXPERIMENT';
+    return 'UNKNOWN';
+  },
+
   // ── Ranking de Minijogos ───────────────────────────────────────
   recordScore(game, score) {
     const key  = 'rank_' + game;

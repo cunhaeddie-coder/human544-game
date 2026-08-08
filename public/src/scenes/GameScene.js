@@ -368,6 +368,14 @@ export class GameScene {
     if (hEl) hEl.textContent = '❤'.repeat(h) + '❤️‍️'.repeat(0) + String.fromCodePoint(0x1F5A4).repeat(Math.max(0, mh - h));
     const cEl = document.getElementById('hud-coins');
     if (cEl) cEl.textContent = `Moedas: ${SaveSystem.getCoins()}`;
+    const humEl = document.getElementById('hud-humanity');
+    if (humEl){
+      const hum = SaveSystem.getHumanity();
+      const label = SaveSystem.getHumanityLabel(hum);
+      const colors = { HUMAN:'#44ee88', UNSTABLE:'#ffc400', EXPERIMENT:'#ff8844', UNKNOWN:'#ff4444' };
+      humEl.style.color = colors[label];
+      humEl.textContent = `HUMANITY: ${hum}% — ${label}`;
+    }
     const lEl = document.getElementById('hud-level');
     if (lEl) lEl.textContent = this.currentConfig?.subtitle ?? '';
     const xpEl = document.getElementById('hud-xp');

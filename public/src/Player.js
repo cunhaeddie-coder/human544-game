@@ -26,6 +26,7 @@ export class Player {
     // Humor
     this._dancing    = false;
     this._konamiSeq  = [];
+    this._humanityCd = { dance: 0, taunt: 0 };
 
     // Sistema de habilidade especial (carrega com kills)
     this._abilityCharge = 0;    // 0-100
@@ -116,6 +117,8 @@ export class Player {
     }
 
     // ── Humor ──────────────────────────────────────────────────
+    if (this._humanityCd.dance > 0) this._humanityCd.dance = Math.max(0, this._humanityCd.dance - dt);
+    if (this._humanityCd.taunt > 0) this._humanityCd.taunt = Math.max(0, this._humanityCd.taunt - dt);
     if (input.justDown('KeyT') && b.onGround) this._dance();
     if (input.justDown('KeyB'))               this._taunt();
     this._checkKonami(input);
@@ -330,6 +333,7 @@ export class Player {
     }, 200);
     // Emote flutuante
     this.scene.fx?.spawnTextPop?.(this.x, this.y - 50, '💃', 0xff88ff);
+    this._gainHumanity(2, 'dance', 6);
   }
 
   _taunt() {
@@ -347,6 +351,17 @@ export class Player {
     this.scene._showMsg(t, 2000);
     Audio.taunt();
     this.scene.fx?.spawnTextPop?.(this.x, this.y - 50, t, 0xffee00);
+    this._gainHumanity(1, 'taunt', 6);
+  }
+
+  // ── Sistema de Humanidade — sobe com ações "humanas", com cooldown
+  // por gatilho pra não virar farm (ver SaveSystem.addHumanity) ────
+  _gainHumanity(amount, key, cooldownSec){
+    if (key && this._humanityCd[key] > 0) return;
+    if (key) this._humanityCd[key] = cooldownSec;
+    SaveSystem.addHumanity(amount);
+    this.scene.fx?.spawnTextPop?.(this.x, this.y - 70, `+${amount} HUMANIDADE`, 0x88ffcc);
+    this.scene.updateHUD?.();
   }
 
   _checkKonami(input) {
@@ -370,6 +385,7 @@ export class Player {
     Audio.konami();
     this.scene._showMsg('🎉 CÓDIGO KONAMI! MODO INVENCÍVEL 10s!', 4000);
     this.scene.fx?.spawnTextPop?.(this.x, this.y - 60, '⬆⬆⬇⬇◀▶◀▶BA', 0xffee00);
+    this._gainHumanity(3, null, 0);
     // Invencibilidade por 10 segundos
     this.invincible = true;
     // Piscar dourado
