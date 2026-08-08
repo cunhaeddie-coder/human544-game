@@ -61,58 +61,81 @@ function readableTextColor(hex) {
   return lum > 0.6 ? '#111111' : '#ffffff';
 }
 
+// Jogador humano visto de cima (estilo boneco de Subbuteo) — cabeça, tronco
+// com a camisa do time, braços, pernas com short e chuteiras. Continua num
+// canvas quadrado pra girar de frente pra câmera sem distorcer.
 function makeJerseyCanvas(team, number) {
   const S = 128;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const ctx = c.getContext('2d');
-  const cx = S / 2, cy = S / 2, r = S * 0.40;
+  const cx = S / 2;
+  const skin = '#dda276';
 
-  // Sombra de contato (parte de baixo do círculo, dá volume)
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + r * 0.75, r * 0.75, r * 0.22, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.18)';
-  ctx.fill();
+  // Chuteiras
+  ctx.fillStyle = '#1c1c1c';
+  ctx.beginPath(); ctx.ellipse(cx - 10, S * 0.90, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 10, S * 0.90, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
 
-  // Camisa (gradiente radial pra dar volume esférico)
-  const grad = ctx.createRadialGradient(cx, cy - r * 0.35, r * 0.1, cx, cy, r);
+  // Pernas (short na cor de detalhe do time)
+  ctx.fillStyle = team.trim;
+  ctx.beginPath(); ctx.ellipse(cx - 10, S * 0.78, 8, 14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 10, S * 0.78, 8, 14, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Braços + mãos
+  ctx.fillStyle = team.shirt;
+  ctx.beginPath(); ctx.ellipse(cx - 27, S * 0.52, 8, 16, -0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 27, S * 0.52, 8, 16, 0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(cx - 30, S * 0.65, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 30, S * 0.65, 6, 0, Math.PI * 2); ctx.fill();
+
+  // Tronco / camisa (gradiente pra dar volume)
+  const grad = ctx.createRadialGradient(cx, S * 0.40, 5, cx, S * 0.52, 30);
   grad.addColorStop(0, lighten(team.shirt, 0.4));
   grad.addColorStop(1, team.shirt);
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(cx, S * 0.52, 24, 26, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.lineWidth = S * 0.055;
+  ctx.lineWidth = 3;
   ctx.strokeStyle = team.trim;
   ctx.stroke();
 
   // Gola em V
   ctx.beginPath();
-  ctx.moveTo(cx - r * 0.30, cy - r * 0.55);
-  ctx.lineTo(cx, cy - r * 0.18);
-  ctx.lineTo(cx + r * 0.30, cy - r * 0.55);
+  ctx.moveTo(cx - 8, S * 0.32);
+  ctx.lineTo(cx, S * 0.40);
+  ctx.lineTo(cx + 8, S * 0.32);
   ctx.strokeStyle = team.trim;
-  ctx.lineWidth = S * 0.04;
+  ctx.lineWidth = 2.5;
   ctx.stroke();
 
   // Número da camisa
   ctx.fillStyle = readableTextColor(team.shirt);
-  ctx.font = `bold ${Math.round(S * 0.34)}px Arial, sans-serif`;
+  ctx.font = `bold ${Math.round(S * 0.20)}px Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(String(number), cx, cy + S * 0.03);
+  ctx.fillText(String(number), cx, S * 0.54);
 
-  // Indicador de direção (nariz) — aponta "pra cima" no canvas;
-  // a rotação em tempo real do sprite gira isso pra direção real.
+  // Cabeça + cabelo
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(cx, S * 0.22, 17, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#241608';
+  ctx.beginPath(); ctx.arc(cx, S * 0.22, 17, Math.PI, 0); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx, S * 0.14, 15, 8, 0, 0, Math.PI); ctx.fill();
+
+  // Indicador de direção (seta acima da cabeça) — aponta "pra cima" no
+  // canvas; a rotação em tempo real do sprite gira isso pra direção real.
   ctx.beginPath();
-  ctx.moveTo(cx, cy - r - S * 0.015);
-  ctx.lineTo(cx - S * 0.06, cy - r + S * 0.10);
-  ctx.lineTo(cx + S * 0.06, cy - r + S * 0.10);
+  ctx.moveTo(cx, S * 0.01);
+  ctx.lineTo(cx - 6, S * 0.075);
+  ctx.lineTo(cx + 6, S * 0.075);
   ctx.closePath();
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.2;
   ctx.stroke();
 
   return c;
