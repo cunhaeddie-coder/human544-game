@@ -72,6 +72,7 @@ PlatformerGame/
         │   ├── RankingScene.js       Ranking dos minijogos
         │   ├── MinecraftScene.js     Modo voxel 3D (WASD + mouse)
         │   ├── FootballScene.js      Minijogo futebol
+        │   ├── RacingScene.js        Minijogo corrida retro top-down (garagem, tráfego IA)
         │   ├── SurvivalScene.js      Minijogo plataformas que caem
         │   ├── TargetsScene.js       Minijogo tiro ao alvo
         │   ├── SumoScene.js          Minijogo sumô
@@ -152,7 +153,7 @@ PlatformerGame/
   MULTIPLAYER
   -----------
   Online    : Socket.io rooms (código de 6 letras)
-  Modos     : Campanha online, PVP online, Boss Raid, Lazer (Football/Minecraft)
+  Modos     : Campanha online, PVP online, Boss Raid, Lazer (Football/Minecraft/Corrida)
   Coop local: P1=WASD / P2=Setas — câmera zoom dinâmico se afastarem
   Kill sync : morte de inimigo propagada para todos na sala
 
@@ -161,7 +162,7 @@ PlatformerGame/
   Moedas     : +5 por moeda, +50 por estrela → loja
   XP         : +15 por kill, +20×fase por saída
   Missões    : 40+ missões com recompensas em moedas
-  Ranking    : 11 minijogos com recordes no localStorage
+  Ranking    : 12 minijogos com recordes no localStorage
 
   MODO HORDA
   ----------
@@ -175,11 +176,29 @@ PlatformerGame/
   10 tipos de bloco: Grama, Terra, Pedra, Madeira, Folha, Água,
                      Carvão, Ferro, Ouro, Diamante
 
-  MINIJOGOS (11)
+  MINIJOGOS (12)
   ---------------
-  Football, Survival, Targets, Sumo, CoinRush,
+  Football, Corrida, Survival, Targets, Sumo, CoinRush,
   Dodge, KingHill, Bomb, Breakout, Snake, ColorFloor
   → Todos salvam score no ranking
+
+  MINIJOGO CORRIDA (retro top-down, rolagem infinita)
+  -----------------------------------------------------
+  Fluxo   : Menu → Garagem (3 carros) → Corrida → Pausa/Game Over
+  Controles: Setas/WASD dirigem (cima/baixo acelera/freia, lados vira),
+             P pausa, ESC volta ao hub
+  Garagem : Relâmpago (veloz/frágil), Equalizer (equilibrado),
+            Muralha (lento/blindado) — atributos reais de física
+  Mecânicas: aceleração/frenagem/marcha ré, derrapagem lateral que
+             aumenta com a velocidade, penalidade ao pisar no acostamento,
+             curva falsa (ilusão senoidal), tráfego com IA de troca de
+             faixa e velocidade relativa própria, colisão AABB com faíscas
+  Progressão: pontuação por distância, dificuldade sobe a cada 1000 pontos
+             (mais inimigos, mais rápido), moedas (+60 pts) e galões de
+             combustível (fuel zera = "Pane seca", game over)
+  HUD     : barra de combustível, corações de vida, moedas, placar e
+            velocímetro digital — tudo em DOM (mesmo padrão do HP do
+            Minecraft), não em sprites 3D, porque atualiza todo frame
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -319,6 +338,22 @@ PlatformerGame/
     - Nova URL pública: https://human544-game.onrender.com
     - Domínio próprio (jogo.sistematraderelite.com.br) cogitado e descartado
       — ficou só na URL padrão do Render.
+
+  Sessão 5 — Futebol (câmera/players/seleções) + Racing recriado (2026-08-07/08)
+    - Football: câmera inclinada estilo transmissão (tilt só nesta cena),
+      jogadores viraram sprite humano (estilo Subbuteo) com camisa/número,
+      seleção de seleções nacionais antes da partida, corredor externo
+      (fora das linhas) que só o jogador atravessa — bola presa ao gramado.
+    - Racing removido e depois recriado do zero como minijogo bem mais rico:
+      fluxo Menu → Garagem (3 carros com física real) → Corrida → Pausa/Game
+      Over, rolagem infinita com curva falsa, tráfego com IA de troca de
+      faixa, moedas/combustível, sistema de partículas, HUD em DOM.
+
+  IMPORTANTE — deploy manual obrigatório
+  ---------------------------------------
+  Toda sessão que mexer no código PRECISA rodar o deploy manual do Render
+  depois do `git push` (ver aviso na seção DEPLOY acima) — sem isso o site
+  em produção continua com o código antigo mesmo com o push feito.
 
 
 ================================================================================
