@@ -46,6 +46,7 @@ export class ModeScene {
           { label:'🥊 PVP',          desc:'Teste entre humanos — 1 vs 1', action:() => this.m.start('PVPScene') },
           { label:'🌐 Online',       desc:'Salas, Boss Raid e minijogos online', action:() => this.m.start('OnlineScene') },
           { label:'🪞 MIRROR (secreto)', desc:'Boss que copia cada movimento seu', action:() => this.m.start('MirrorBossScene') },
+          { label:'🧱 THE WALL (secreto)', desc:'Escale antes de ser esmagado', action:() => this.m.start('WallBossScene') },
         ] },
     ];
     this._view = 'doors'; this._activeDoor = null; this._sel = 0;
