@@ -38,6 +38,12 @@ const KICK_FORCE = 700;
 const PLAYER_R   = 22;
 const PLAYER_FRICTION = 0.82; // decelera suavemente ao soltar teclas
 
+// Corredor externo — a bola nunca sai do retângulo do gramado (40-1240 / 130-645,
+// ver bounce manual no update()); só o jogador pode circular até este perímetro
+// bem mais largo, dando a volta no campo inteiro por fora das linhas.
+const OUTER_LEFT = 5, OUTER_RIGHT = 1275, OUTER_TOP = 95, OUTER_BOTTOM = 680;
+const RING_COLOR = 0x342a1e;
+
 // ── Canvas art helpers (sprites sempre de frente pra câmera) ────────
 function lighten(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
@@ -274,8 +280,17 @@ export class FootballScene {
     // Background
     E.plane(1280, 720, map.sky, 640, 360, -400);
 
+    // Corredor externo (fora de campo — só o jogador entra aqui, a bola não passa)
+    E.plane(OUTER_RIGHT - OUTER_LEFT, OUTER_BOTTOM - OUTER_TOP, RING_COLOR,
+      (OUTER_LEFT + OUTER_RIGHT) / 2, (OUTER_TOP + OUTER_BOTTOM) / 2, -11);
+
     // Field
     E.plane(1200, 500, map.grass, 640, 390, -10);
+    // Linha de contorno do gramado — marca onde a bola para de poder ir
+    E.box(1200, 4, 2, map.line, 640, 130, -4);
+    E.box(1200, 4, 2, map.line, 640, 645, -4);
+    E.box(4, 515, 2, map.line, 40, 387, -4);
+    E.box(4, 515, 2, map.line, 1240, 387, -4);
     // Listras de grama cortada (visual)
     for (let s = 0; s < 6; s++) {
       E.plane(1200, 500 / 6, s % 2 === 0 ? lighten2(map.grass) : map.grass, 640, 140 + s * (500 / 6), -9, 0.35);
@@ -296,11 +311,13 @@ export class FootballScene {
     E.text(`${this._team1.flag} ${this._team1.code} — J/L I/K`, 9, 0xff4444, 1150, 22, 5);
     this._scoreSp = E.text('0 - 0', 20, 0xffffff, 640, 22, 8);
 
-    // Paredes do campo (sem chão/teto de gravidade)
-    this.physics.addStatic(new Body(40, 140, 10, 500));   // parede esquerda
-    this.physics.addStatic(new Body(1230, 140, 10, 500)); // parede direita
-    this.physics.addStatic(new Body(40, 130, 1200, 10));  // parede topo
-    this.physics.addStatic(new Body(40, 640, 1200, 10));  // parede fundo
+    // Paredes do CORREDOR EXTERNO (limite de movimento do jogador — bem mais
+    // largas que o gramado; a bola nunca chega até aqui, ver bounce no update())
+    const ringH = OUTER_BOTTOM - OUTER_TOP, ringW = OUTER_RIGHT - OUTER_LEFT;
+    this.physics.addStatic(new Body(OUTER_LEFT - 10, OUTER_TOP, 10, ringH));    // parede esquerda
+    this.physics.addStatic(new Body(OUTER_RIGHT, OUTER_TOP, 10, ringH));        // parede direita
+    this.physics.addStatic(new Body(OUTER_LEFT, OUTER_TOP - 10, ringW, 10));    // parede topo
+    this.physics.addStatic(new Body(OUTER_LEFT, OUTER_BOTTOM, ringW, 10));      // parede fundo
 
     // Goal posts + areas
     this._buildGoal(E, 'left');
@@ -332,6 +349,8 @@ export class FootballScene {
 
     this._state = 'playing';
     this._showMsg('APITO INICIAL!', 1500);
+    const hint = E.text('Corredor externo (marrom): só o jogador entra — a bola fica no gramado', 10, 0xffaa44, 640, 405, 45);
+    setTimeout(() => this.e.remove(hint), 3500);
   }
 
   _makeShadow(x, y, r) {
