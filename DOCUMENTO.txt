@@ -366,6 +366,28 @@ PlatformerGame/
       Dançar (+2), taunt (+1) e Código Konami (+3) dão Humanidade, com
       cooldown de 6s por gatilho pra não virar farm. Mostrado no HUD da
       campanha (#hud-humanity) como "HUMANITY: XX% — LABEL".
+    - ModeScene virou o Laboratório 544 por dentro (mesma chave de cena,
+      zero call sites quebrados): 4 portas — Campo de Testes, Área
+      Esportiva, Laboratório, Área Proibida (bloqueada até Fase 3).
+    - 4 bosses secretos novos, cada um arena própria e independente da
+      campanha (não usam Player.js/GameScene): MIRROR (copia movimentos
+      com atraso), THE WALL (escale antes do esmagador te alcançar),
+      GLITCH (gravidade/controles/chão/câmera bugam durante a luta,
+      ThreeEngine ganhou setFlip pra câmera invertida), 544 (clone
+      instantâneo espelhado, sem atraso). Todos na Área Proibida.
+    - HUMAN 545: sussurros de NPC escondido no Laboratório (30% de
+      chance) + vinheta de diálogo do primeiro encontro (Rival545Scene).
+    - Rankings expandidos: RankingScene ganha aba "Laboratório" com
+      Survivor/Killer/Collector/Human usando stat real já rastreado.
+    - Modo Caos na campanha: opt-in via data.chaos no GameScene.js
+      (gravidade/moedas/câmera aleatórios), mudança mínima e isolada em
+      5 pontos do arquivo mais crítico do jogo — sem playtesting real.
+    - Roadmap completo (8 fases) documentado em LORE.txt com status
+      atualizado; várias fases ficaram parciais de propósito (544
+      aparecendo nas fases, 544 Segundos, final ramificado, eventos no
+      hub, multiplayer com eventos) por exigirem mexer ainda mais fundo
+      no GameScene.js/LevelConfig.js ou em backend — melhor com
+      playtesting real entre passadas, não tudo de uma vez sem checar.
 
   IMPORTANTE — deploy manual obrigatório
   ---------------------------------------
