@@ -5,6 +5,17 @@
 
 import { SaveSystem } from '../systems/SaveSystem.js';
 
+// Sussurros do NPC escondido — pistas soltas sobre o HUMAN 545,
+// aparecem de vez em quando na tela principal do Laboratório.
+const WHISPERS = [
+  '"...você é o 544?"',
+  '"Não confie no número 545."',
+  '"Eles não deveriam ter religado o outro tanque."',
+  '"544... corra."',
+  '"545 já esteve aqui antes de você."',
+  '"Tem outro experimento. Mais novo. Mais bravo."',
+];
+
 export class ModeScene {
   constructor(e, m, i) {
     this.e = e; this.m = m; this.inp = i;
@@ -49,6 +60,7 @@ export class ModeScene {
           { label:'🧱 THE WALL (secreto)', desc:'Escale antes de ser esmagado', action:() => this.m.start('WallBossScene') },
           { label:'👾 GLITCH (secreto)', desc:'A arena buga sozinha durante a luta', action:() => this.m.start('GlitchBossScene') },
           { label:'🫵 544 (secreto)', desc:'Encare você mesmo — sem atraso, sem piedade', action:() => this.m.start('Boss544Scene') },
+          { label:'👤 ??? (rumor)', desc:'Alguém quer falar com você', action:() => this.m.start('Rival545Scene') },
         ] },
     ];
     this._view = 'doors'; this._activeDoor = null; this._sel = 0;
@@ -127,6 +139,12 @@ export class ModeScene {
     );
 
     this.text('Setas/WASD navega   ENTER entra   ESC sai', 11, 0x2a3a4a, 640, 700, 10);
+
+    // Sussurro escondido — ~30% de chance a cada visita ao Laboratório
+    if (Math.random() < 0.3) {
+      const line = WHISPERS[(Math.random() * WHISPERS.length) | 0];
+      this.text(line, 10, 0x664466, 640, 106, 6);
+    }
   }
 
   // ── Sub-painel de uma categoria ───────────────────────────────

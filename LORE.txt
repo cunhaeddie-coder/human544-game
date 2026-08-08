@@ -303,7 +303,12 @@ no nome do jogo.
       pela Área Proibida do Laboratório. Balanceamento (dano, timing,
       velocidade do esmagador) foi calculado só no papel, sem
       playtesting real — pode precisar de ajuste depois de jogado.
-  [ ] Fase 4 — HUMAN 545 (aparições em fase + NPCs escondidos com pistas)
+  [x] Fase 4 (parcial) — HUMAN 545: sussurros de NPC escondido no Laboratório
+      (30% de chance por visita, 6 falas) + vinheta de diálogo do primeiro
+      encontro (Rival545Scene, acessível pela Área Proibida) — 2026-08-08
+      Falta: 545 aparecendo DURANTE fases da campanha (ajudando/atrapalhando/
+      roubando power-up) — isso exige mexer no GameScene.js/LevelConfig.js,
+      adiado de propósito pra não arriscar a campanha sem playtesting.
   [ ] Fase 5 — Modo Caos + Modo 544 Segundos
   [ ] Fase 6 — Sistema de Testes por fase (3 testes/fase)
   [ ] Fase 7 — Final ramificado (544 vs 000, loops de replay 2ª-6ª zerada)
