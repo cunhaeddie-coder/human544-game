@@ -379,23 +379,17 @@ export class OnlineScene {
     this._t2('ESCOLHA O MINIGAME:', 18, 0xffcc00, 640, 80);
 
     const games = [
-      { label: '⚽  Football', x: 200, bc: 0x0a1a05, hc: 0x0d3010, tc: 0x44ee88,
+      { label: '⚽  Football', x: 420, bc: 0x0a1a05, hc: 0x0d3010, tc: 0x44ee88,
         action: () => this._buildVoteScreen(
           [{ name: 'Arena Clássica' }],
           'FootballScene'
         )
       },
-      { label: '⛏  Minecraft', x: 640, bc: 0x0a1a0a, hc: 0x163a16, tc: 0x88dd44,
+      { label: '⛏  Minecraft', x: 860, bc: 0x0a1a0a, hc: 0x163a16, tc: 0x88dd44,
         action: () => {
           this._net.socket.emit('startGame', { scene: 'MinecraftScene', mode: 'online' });
           this._startGame({ scene: 'MinecraftScene', mode: 'online' });
         }
-      },
-      { label: '🏎  Racing',   x: 1080, bc: 0x1a0a00, hc: 0x3a1800, tc: 0xffaa44,
-        action: () => this._buildVoteScreen(
-          [{ name: 'Oval Clássico' }, { name: 'Cidade' }],
-          'RacingScene'
-        )
       },
     ];
 

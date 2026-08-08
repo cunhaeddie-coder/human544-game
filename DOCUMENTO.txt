@@ -72,7 +72,6 @@ PlatformerGame/
         │   ├── RankingScene.js       Ranking dos minijogos
         │   ├── MinecraftScene.js     Modo voxel 3D (WASD + mouse)
         │   ├── FootballScene.js      Minijogo futebol
-        │   ├── RacingScene.js        Minijogo corrida
         │   ├── SurvivalScene.js      Minijogo plataformas que caem
         │   ├── TargetsScene.js       Minijogo tiro ao alvo
         │   ├── SumoScene.js          Minijogo sumô
@@ -153,7 +152,7 @@ PlatformerGame/
   MULTIPLAYER
   -----------
   Online    : Socket.io rooms (código de 6 letras)
-  Modos     : Campanha online, PVP online, Boss Raid, Lazer (Football/Racing)
+  Modos     : Campanha online, PVP online, Boss Raid, Lazer (Football/Minecraft)
   Coop local: P1=WASD / P2=Setas — câmera zoom dinâmico se afastarem
   Kill sync : morte de inimigo propagada para todos na sala
 
@@ -162,7 +161,7 @@ PlatformerGame/
   Moedas     : +5 por moeda, +50 por estrela → loja
   XP         : +15 por kill, +20×fase por saída
   Missões    : 40+ missões com recompensas em moedas
-  Ranking    : 12 minijogos com recordes no localStorage
+  Ranking    : 11 minijogos com recordes no localStorage
 
   MODO HORDA
   ----------
@@ -176,9 +175,9 @@ PlatformerGame/
   10 tipos de bloco: Grama, Terra, Pedra, Madeira, Folha, Água,
                      Carvão, Ferro, Ouro, Diamante
 
-  MINIJOGOS (12)
+  MINIJOGOS (11)
   ---------------
-  Football, Racing, Survival, Targets, Sumo, CoinRush,
+  Football, Survival, Targets, Sumo, CoinRush,
   Dodge, KingHill, Bomb, Breakout, Snake, ColorFloor
   → Todos salvam score no ranking
 

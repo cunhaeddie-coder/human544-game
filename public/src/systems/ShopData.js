@@ -82,7 +82,6 @@ export const MISSIONS_DATA = [
   { id:'football_goal', name:'Goleador',             desc:'Marque 10 gols no futebol', stat:'footballGoals', target:10,reward:200,icon:'⚽' },
   { id:'targets_100',   name:'Atirador',             desc:'Destrua 100 alvos',         stat:'targetsDestroyed',target:100,reward:300,icon:'🎯' },
   { id:'survival_30',   name:'Sobrevivente',         desc:'Sobreviva 30s no modo sobrevivencia',stat:'survivalTime',target:30,reward:250,icon:'⚠' },
-  { id:'racing_win',    name:'Piloto',               desc:'Venca uma corrida',         stat:'racingWins',  target:1,reward:300,  icon:'🏎' },
   { id:'snake_100',     name:'Cobrador',             desc:'Alcance 100 pts no Snake',  stat:'snakeScore',  target:100,reward:200,icon:'🐍' },
   { id:'breakout_clear',name:'Quebradiço',           desc:'Complete 1 nivel do Breakout',stat:'breakoutLevels',target:1,reward:200,icon:'🧱' },
   // Progressao

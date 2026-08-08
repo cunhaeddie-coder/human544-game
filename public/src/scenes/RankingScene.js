@@ -6,7 +6,6 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 
 const GAME_LABELS = {
   football:   'Futebol',
-  racing:     'Corrida',
   survival:   'Survival',
   targets:    'Alvos',
   sumo:       'Sumo',

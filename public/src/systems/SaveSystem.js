@@ -150,7 +150,7 @@ export const SaveSystem = {
   },
 
   getAllRankings() {
-    const games = ['football','racing','survival','targets','sumo','coinrush','dodge','kinghill','bomb','breakout','snake','colorfloor'];
+    const games = ['football','survival','targets','sumo','coinrush','dodge','kinghill','bomb','breakout','snake','colorfloor'];
     return games
       .map(g => {
         const scores = SaveSystem.getTopScores(g);

@@ -23,7 +23,6 @@ export class LeisureScene {
       { label:'SOBREVIVENCIA', desc:'Plataformas caem – ultimo de pe vence',       key:'survive',  col:0xff4757 },
       { label:'FUTEBOL',       desc:'2 jogadores, marque 5 gols',                  key:'football', col:0x00e676 },
       { label:'ALVOS',         desc:'Destrua o maximo de alvos em 30s',            key:'targets',  col:0xffc400 },
-      { label:'CORRIDA',       desc:'Corrida de carros – 3 voltas (W/S A/D)',      key:'racing',   col:0x4488ff },
       { label:'SUMO',          desc:'Empurre o oponente, plataforma encolhe',      key:'sumo',     col:0xff8800 },
       { label:'CORRIDA MOEDAS',desc:'Colete mais moedas em 30s',                   key:'coinrush', col:0xffd700 },
       // Página 1
@@ -88,7 +87,6 @@ export class LeisureScene {
       survive:   ['SurvivalScene',   { players: 2 }],
       football:  ['FootballScene',   {}],
       targets:   ['TargetsScene',    { players: 2 }],
-      racing:    ['RacingScene',     { players: 2 }],
       sumo:      ['SumoScene',       {}],
       coinrush:  ['CoinRushScene',   { players: 2 }],
       dodge:     ['DodgeScene',      { players: 2 }],
