@@ -53,20 +53,25 @@ export class ThreeEngine {
   // The frustum shows game X: (camX - GW/2) to (camX + GW/2)
   //                  game Y: (camY - GH/2) to (camY + GH/2)
   _updateCamera() {
+    // "up" precisa ser setado ANTES do lookAt (lookAt usa up pra montar a
+    // matriz de view) — usado pelo boss GLITCH pra inverter a câmera.
+    this.camera.up.set(0, this._flip ? -1 : 1, 0);
     if (this._tilt) {
       const { height, pullBack } = this._tilt;
       this.camera.position.set(this._camX, -this._camY + pullBack, height);
-      this.camera.up.set(0, 1, 0);
       this.camera.lookAt(this._camX, -this._camY - pullBack * 0.15, 0);
     } else {
       this.camera.position.set(this._camX, -this._camY, 700);
-      this.camera.up.set(0, 1, 0);
       this.camera.lookAt(this._camX, -this._camY, 0);
     }
     this.sun.position.set(this._camX + 400, -this._camY + 300, 700);
     this.sun.target.position.set(this._camX, -this._camY, 0);
     this.sun.target.updateMatrixWorld();
   }
+
+  // Câmera de cabeça pra baixo (usado pelo boss GLITCH) — sempre resetar
+  // no destroy() da cena que usar, senão vaza pra próxima cena.
+  setFlip(on) { this._flip = on; this._updateCamera(); }
 
   // Angled "broadcast" camera (used by Football for a golazo-style view).
   // height: distance along Z, pullBack: how far back/down the camera sits

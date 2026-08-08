@@ -47,6 +47,7 @@ export class ModeScene {
           { label:'🌐 Online',       desc:'Salas, Boss Raid e minijogos online', action:() => this.m.start('OnlineScene') },
           { label:'🪞 MIRROR (secreto)', desc:'Boss que copia cada movimento seu', action:() => this.m.start('MirrorBossScene') },
           { label:'🧱 THE WALL (secreto)', desc:'Escale antes de ser esmagado', action:() => this.m.start('WallBossScene') },
+          { label:'👾 GLITCH (secreto)', desc:'A arena buga sozinha durante a luta', action:() => this.m.start('GlitchBossScene') },
         ] },
     ];
     this._view = 'doors'; this._activeDoor = null; this._sel = 0;
