@@ -38,6 +38,7 @@ import { HordeScene }    from './scenes/HordeScene.js';
 import { MirrorBossScene } from './scenes/MirrorBossScene.js';
 import { WallBossScene } from './scenes/WallBossScene.js';
 import { GlitchBossScene } from './scenes/GlitchBossScene.js';
+import { Boss544Scene } from './scenes/Boss544Scene.js';
 
 const engine  = new ThreeEngine();
 const input   = new Input();
@@ -71,6 +72,7 @@ manager.register('HordeScene',     HordeScene);
 manager.register('MirrorBossScene', MirrorBossScene);
 manager.register('WallBossScene', WallBossScene);
 manager.register('GlitchBossScene', GlitchBossScene);
+manager.register('Boss544Scene', Boss544Scene);
 
 engine.start(dt => { manager.update(dt); input.flush(); });
 

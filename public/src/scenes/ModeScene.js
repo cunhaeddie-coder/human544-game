@@ -48,6 +48,7 @@ export class ModeScene {
           { label:'🪞 MIRROR (secreto)', desc:'Boss que copia cada movimento seu', action:() => this.m.start('MirrorBossScene') },
           { label:'🧱 THE WALL (secreto)', desc:'Escale antes de ser esmagado', action:() => this.m.start('WallBossScene') },
           { label:'👾 GLITCH (secreto)', desc:'A arena buga sozinha durante a luta', action:() => this.m.start('GlitchBossScene') },
+          { label:'🫵 544 (secreto)', desc:'Encare você mesmo — sem atraso, sem piedade', action:() => this.m.start('Boss544Scene') },
         ] },
     ];
     this._view = 'doors'; this._activeDoor = null; this._sel = 0;

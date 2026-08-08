@@ -1,0 +1,158 @@
+// ── Boss Secreto: 544 ──────────────────────────────────────────────
+// O próprio HUMAN 544 — um clone perfeito, sem atraso (diferente do
+// MIRROR). Reflete seus movimentos instantaneamente e na horizontal
+// invertida: você se move certo, ele se move na sua direção; você
+// pula, ele pula junto; você atira, ele atira de volta. O boss "final"
+// secreto da Fase 3 — sem janela de atraso pra explorar, só HP e
+// posicionamento. Arena própria e independente da campanha.
+// WASD move/pula · Espaço atira · ESC sai
+
+import * as THREE from 'three';
+import { Physics2D, Body } from '../engine/Physics2D.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
+
+const GRAVITY = 900;
+const SPD = 200;
+const JUMP_V = -420;
+const GROUND_Y = 620;
+const BULLET_SPD = 520;
+
+export class Boss544Scene {
+  constructor(e, m, i){
+    this.e = e; this.m = m; this.inp = i;
+    this.physics = new Physics2D();
+    this._state = 'playing';
+    this._bullets = [];
+  }
+
+  create(){
+    this.physics.setGravity(GRAVITY);
+    this.physics.setWorldBounds(40, 1240, 9999);
+    const E = this.e;
+
+    E.plane(1280, 720, 0x120612, 640, 360, -400);
+    E.plane(1280, 44, 0x000000, 640, 22, -390);
+    E.text('BOSS SECRETO — 544', 16, 0xcc88ff, 640, 22, 5);
+    E.text('WASD move/pula · Espaço atira · ESC sai', 9, 0x8899aa, 640, 700, 5);
+
+    this.physics.addStatic(new Body(40, GROUND_Y, 1200, 20));
+    E.box(1200, 20, 10, 0x221133, 640, GROUND_Y + 10, -2);
+    this.physics.addStatic(new Body(30, 100, 10, GROUND_Y - 100));
+    this.physics.addStatic(new Body(1240, 100, 10, GROUND_Y - 100));
+
+    this._playerBody = new Body(200 - 16, GROUND_Y - 48, 32, 48);
+    this.physics.addBody(this._playerBody);
+    this._playerSprite = E.box(32, 48, 20, 0x4488ff, 200, GROUND_Y - 24, 4);
+    this._playerHP = 100; this._playerMaxHP = 100; this._playerDir = 1;
+
+    this._cloneBody = new Body(1080 - 16, GROUND_Y - 48, 32, 48);
+    this.physics.addBody(this._cloneBody);
+    this._cloneSprite = E.box(32, 48, 20, 0x4488ff, 1080, GROUND_Y - 24, 4);
+    this._cloneSprite.material.emissive = new THREE.Color(0x8844ff);
+    this._cloneSprite.material.emissiveIntensity = 0.55;
+    this._cloneHP = 300; this._cloneMaxHP = 300; this._cloneDir = -1;
+
+    this._buildHUD();
+    this._showMsg('"...Eu já vi esse teste antes." — 544 encara você.', 3200);
+  }
+
+  _buildHUD(){
+    const mk = css => { const d = document.createElement('div'); d.style.cssText = css; document.body.appendChild(d); return d; };
+    const base = 'position:fixed;top:56px;z-index:500;pointer-events:none;background:rgba(6,4,10,.6);' +
+      'border-radius:6px;font-family:monospace;color:#fff;font-size:10px;padding:6px 10px;width:220px;';
+    this._hpPlayerEl = mk(base + 'left:12px;');
+    this._hpCloneEl = mk(base + 'right:12px;text-align:right;');
+    this._domEls = [this._hpPlayerEl, this._hpCloneEl];
+  }
+
+  _updateHUD(){
+    const pPct = Math.max(0, this._playerHP / this._playerMaxHP) * 100;
+    const cPct = Math.max(0, this._cloneHP / this._cloneMaxHP) * 100;
+    this._hpPlayerEl.innerHTML = `VOCÊ<div style="height:8px;background:#0c0a14;border-radius:3px;overflow:hidden;margin-top:3px;">` +
+      `<div style="height:100%;width:${pPct}%;background:#4488ff;"></div></div>`;
+    this._hpCloneEl.innerHTML = `544<div style="height:8px;background:#0c0a14;border-radius:3px;overflow:hidden;margin-top:3px;">` +
+      `<div style="height:100%;width:${cPct}%;background:#8844ff;"></div></div>`;
+  }
+
+  _showMsg(text, dur){
+    if (this._msgSp) { this.e.remove(this._msgSp); this._msgSp = null; }
+    this._msgSp = this.e.text(text, 14, 0xffee88, 640, 90, 50);
+    if (dur > 0) setTimeout(() => { if (this._msgSp) { this.e.remove(this._msgSp); this._msgSp = null; } }, dur);
+  }
+
+  _spawnBullet(x, y, dir, owner){
+    const color = owner === 'player' ? 0x88ccff : 0xcc88ff;
+    const mesh = this.e.box(14, 6, 6, color, x, y, 5);
+    this._bullets.push({ mesh, x, y, vx: dir * BULLET_SPD, owner });
+  }
+
+  update(dt){
+    if (this.inp.justDown('Escape')){ this.m.start('ModeScene'); return; }
+    if (this._state !== 'playing'){
+      if (this.inp.justDown('Enter')) this.m.start('ModeScene');
+      return;
+    }
+
+    this.physics.step(dt);
+
+    // Jogador
+    const b = this._playerBody, inp = this.inp;
+    let vx = 0;
+    if (inp.left)  { vx = -SPD; this._playerDir = -1; }
+    if (inp.right) { vx =  SPD; this._playerDir =  1; }
+    b.vx = vx;
+    const jumpNow = inp.justDown('KeyW') && b.onGround;
+    if (jumpNow) b.vy = JUMP_V;
+    const shootNow = inp.justDown('Space');
+    if (shootNow) this._spawnBullet(b.cx + this._playerDir * 20, b.cy - 6, this._playerDir, 'player');
+    this._playerSprite.position.set(b.cx, -b.cy, 4);
+
+    // 544 — reflexo instantâneo, sem atraso, espelhado na horizontal
+    const cb = this._cloneBody;
+    this._cloneDir = -this._playerDir;
+    cb.vx = -vx;
+    if (jumpNow && cb.onGround) cb.vy = JUMP_V;
+    if (shootNow) this._spawnBullet(cb.cx + this._cloneDir * 20, cb.cy - 6, this._cloneDir, 'clone');
+    this._cloneSprite.position.set(cb.cx, -cb.cy, 4);
+
+    // Balas
+    for (let i = this._bullets.length - 1; i >= 0; i--){
+      const bl = this._bullets[i];
+      bl.x += bl.vx * dt;
+      bl.mesh.position.x = bl.x;
+      if (bl.x < 30 || bl.x > 1250){ this.e.remove(bl.mesh); this._bullets.splice(i, 1); continue; }
+
+      if (bl.owner === 'player' && Math.abs(bl.x - cb.cx) < 24 && Math.abs(bl.y - cb.cy) < 30){
+        this._cloneHP -= 15;
+        this.e.remove(bl.mesh); this._bullets.splice(i, 1);
+        if (this._cloneHP <= 0) return this._win();
+      } else if (bl.owner === 'clone' && Math.abs(bl.x - b.cx) < 24 && Math.abs(bl.y - b.cy) < 30){
+        this._playerHP -= 8;
+        this.e.remove(bl.mesh); this._bullets.splice(i, 1);
+        if (this._playerHP <= 0) return this._lose();
+      }
+    }
+
+    this._updateHUD();
+  }
+
+  _win(){
+    this._state = 'won';
+    SaveSystem.addMissionProgress('bosses', 1);
+    SaveSystem.addHumanity(8);
+    this._showMsg('VOCÊ VENCEU A SI MESMO. +8 HUMANIDADE — ENTER pra voltar', 0);
+  }
+
+  _lose(){
+    this._state = 'lost';
+    this._showMsg('544 FOI MAIS RÁPIDO QUE VOCÊ — ENTER pra voltar', 0);
+  }
+
+  destroy(){
+    this._bullets.forEach(bl => this.e.remove(bl.mesh));
+    this._bullets = [];
+    this._domEls?.forEach(el => el.remove());
+    if (this._msgSp) this.e.remove(this._msgSp);
+    this.physics.clear();
+  }
+}

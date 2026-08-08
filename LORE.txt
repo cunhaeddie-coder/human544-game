@@ -296,8 +296,13 @@ no nome do jogo.
 
   [x] Fase 0 — este documento (lore completo registrado)
   [x] Fase 1 — Sistema de Humanidade v1 (stat + 3 gatilhos + HUD) — 2026-08-08
-  [ ] Fase 2 — Laboratório 544 (hub navegável substituindo/estendendo ModeScene)
-  [ ] Fase 3 — Bosses reescritos (THE WALL, MIRROR, GLITCH, 544)
+  [x] Fase 2 — Laboratório 544 (hub por categorias, dentro da própria ModeScene) — 2026-08-08
+  [x] Fase 3 — Bosses reescritos: THE WALL, MIRROR, GLITCH, 544 — 2026-08-08
+      Cada um é uma arena própria e independente da campanha (não usam
+      Player.js/GameScene — física e combate autocontidos), acessível
+      pela Área Proibida do Laboratório. Balanceamento (dano, timing,
+      velocidade do esmagador) foi calculado só no papel, sem
+      playtesting real — pode precisar de ajuste depois de jogado.
   [ ] Fase 4 — HUMAN 545 (aparições em fase + NPCs escondidos com pistas)
   [ ] Fase 5 — Modo Caos + Modo 544 Segundos
   [ ] Fase 6 — Sistema de Testes por fase (3 testes/fase)
