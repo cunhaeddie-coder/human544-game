@@ -192,19 +192,29 @@ PlatformerGame/
   Plataforma : Render (render.com) — plano free (srv-d9r7mqijnfac73f3jcl0)
   GitHub     : https://github.com/cunhaeddie-coder/human544-game
   URL pública: https://human544-game.onrender.com
-  Trigger    : push no branch master → deploy automático (~1-2 min)
+  Trigger    : MANUAL — ver aviso abaixo, `git push` sozinho NÃO deploya
   Owner      : Edimar's workspace (tea-d9r7l7ifngtc73cp0pq0), conta cunha.eddie@gmail.com
+
+  ⚠ AUTO-DEPLOY NÃO ESTÁ ATIVO (desde a criação em 2026-08-07)
+  ---------------------------------------------------------------
+  O serviço foi criado direto via API do Render (POST /v1/services com a
+  URL do repo), sem passar pela conexão OAuth do GitHub App do Render.
+  Resultado: NÃO existe webhook do Render no repositório GitHub (checado
+  com `gh api repos/cunhaeddie-coder/human544-game/hooks` → lista vazia).
+  Isso já causou confusão real: dois `git push` seguidos (doc + feature de
+  futebol) não apareceram no site até um deploy manual ser disparado.
+  Enquanto isso não for corrigido no dashboard do Render (Account Settings
+  → Git Providers, ou "Connect GitHub" na página do serviço), TODO push
+  precisa de um deploy manual — ver comando abaixo.
 
   COMO O DEPLOY FUNCIONA
   ----------------------
-  1. Render monitora o repositório GitHub (cunhaeddie-coder/human544-game)
-  2. A cada `git push` no master, Render inicia um novo build automaticamente
-  3. Build: instala dependências com `npm install` (via package.json)
-  4. Start: executa `npm start` → `node server.js`
-  5. Render injeta a variável de ambiente PORT automaticamente
+  1. Build: instala dependências com `npm install` (via package.json)
+  2. Start: executa `npm start` → `node server.js`
+  3. Render injeta a variável de ambiente PORT automaticamente
      (server.js usa: const PORT = process.env.PORT || 3000)
-  6. URL pública permanece a mesma após cada redeploy
-  7. Plano free "dorme" após ~15 min sem acesso — primeiro request depois
+  4. URL pública permanece a mesma após cada redeploy
+  5. Plano free "dorme" após ~15 min sem acesso — primeiro request depois
      disso demora alguns segundos pra "acordar" o serviço (cold start)
 
   PUBLICAR UMA ATUALIZAÇÃO
@@ -213,6 +223,9 @@ PlatformerGame/
     git add .
     git commit -m "descrição da mudança"
     git push
+  → Disparar deploy manual (obrigatório — auto-deploy não funciona, ver aviso acima):
+    curl -X POST https://api.render.com/v1/services/srv-d9r7mqijnfac73f3jcl0/deploys \
+      -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" -d '{}'
   → Aguardar ~1-2 minutos → acessar a URL pública para verificar
 
   PRIMEIRO DEPLOY (se precisar refazer do zero)
