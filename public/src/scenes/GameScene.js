@@ -124,7 +124,19 @@ export class GameScene {
     const cfg = this.currentConfig;
     const pal = PALETTES[this.levelNum] || PALETTES[1];
 
-    this.physics.setGravity(cfg.gravity || 550);
+    // Modo Caos — modificadores aleatórios, opt-in via data.chaos (ver
+    // Laboratório 544 → Campo de Testes). Não mexe em nada além de
+    // gravidade/moedas/câmera — spawn de inimigos fica igual de propósito.
+    this._chaos = !!data.chaos;
+    this._coinMult = 1;
+    let gravityMult = 1;
+    if (this._chaos) {
+      gravityMult = [0.5, 1, 1.6][(Math.random() * 3) | 0];
+      this._coinMult = Math.random() < 0.4 ? 3 : 1;
+      this._chaosFlip = Math.random() < 0.3;
+      if (this._chaosFlip) this.engine.setFlip(true);
+    }
+    this.physics.setGravity((cfg.gravity || 550) * gravityMult);
     // No bottom soft floor — falling below 600 triggers kill plane in update()
     this.physics.setWorldBounds(0, cfg.worldWidth, 9999);
     this.engine.setWorldBounds(0, cfg.worldWidth);
@@ -181,7 +193,14 @@ export class GameScene {
     this.engine._camX = cfg.spawn.x;
     this.engine._camY = 270;
     this.updateHUD();
-    this._showMsg(`${cfg.subtitle} - ${cfg.name}`, 3000);
+    if (this._chaos) {
+      const bits = [`gravidade x${gravityMult}`];
+      if (this._coinMult > 1) bits.push('moedas x3');
+      if (this._chaosFlip) bits.push('câmera invertida');
+      this._showMsg(`⚡ MODO CAOS: ${bits.join(', ')}`, 5000);
+    } else {
+      this._showMsg(`${cfg.subtitle} - ${cfg.name}`, 3000);
+    }
 
     // Pets
     this.pets = new PetSystem(this.engine.scene, this.engine);
@@ -580,9 +599,9 @@ export class GameScene {
       c.mesh.rotation.y += dt * 2;
       if (this.physics.overlaps(p.body, c.body)) {
         this.engine.remove(c.mesh);
-        SaveSystem.addCoins(5);
+        SaveSystem.addCoins(5 * this._coinMult);
         this.fx?.spawnCollectPop(c.startY > 0 ? c.body.x + 7 : p.x, c.startY, 0xffd700);
-        this.fx?.spawnTextPop(p.x, p.y - 30, '+5', 0xffd700);
+        this.fx?.spawnTextPop(p.x, p.y - 30, `+${5 * this._coinMult}`, 0xffd700);
         Audio.coin();
         this.updateHUD();
         return false;
@@ -596,8 +615,8 @@ export class GameScene {
       s.mesh.rotation.x += dt * 1.5;
       if (this.physics.overlaps(p.body, s.body)) {
         if (SaveSystem.collectStar(this.levelNum, s.id)) {
-          SaveSystem.addCoins(50);
-          this._showMsg('Estrela coletada! +50 moedas');
+          SaveSystem.addCoins(50 * this._coinMult);
+          this._showMsg(`Estrela coletada! +${50 * this._coinMult} moedas`);
           this.fx?.spawnCollectPop(s.body.x + 9, s.body.y + 9, 0xffee00);
           this.fx?.spawnTextPop(p.x, p.y - 40, '★ +50', 0xffee00);
           Audio.star();
@@ -753,6 +772,7 @@ export class GameScene {
   }
 
   destroy() {
+    this.engine.setFlip(false); // garante que o Modo Caos nunca deixa a câmera invertida vazar
     this._closePause();
     const btn = document.getElementById('pause-btn');
     if (btn) btn.style.display = 'none';

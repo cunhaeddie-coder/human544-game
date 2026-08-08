@@ -36,6 +36,7 @@ export class ModeScene {
           { label:'⚔ Solo',       desc:'Aventure-se sozinho pela campanha', action:() => this.m.start('GameScene', { level:1, mode:'solo' }) },
           { label:'👥 Coop Local', desc:'P1:WASD+Espaço  P2:Setas+Enter',   action:() => this.m.start('GameScene', { level:1, mode:'coop' }) },
           { label:'💀 Contenção',  desc:'Modo Horda — ondas infinitas de experimentos', action:() => this.m.start('HordeScene') },
+          { label:'⚡ Modo Caos',  desc:'Fase 1 com modificadores aleatórios (gravidade, moedas, câmera)', action:() => this.m.start('GameScene', { level:1, mode:'solo', chaos:true }) },
         ] },
       { key:'esportiva', label:'🏆 ÁREA ESPORTIVA', desc:'Testes de competição, força e reflexo', col:0x00e676, locked:false,
         items: [

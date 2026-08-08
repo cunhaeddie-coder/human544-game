@@ -309,7 +309,15 @@ no nome do jogo.
       Falta: 545 aparecendo DURANTE fases da campanha (ajudando/atrapalhando/
       roubando power-up) — isso exige mexer no GameScene.js/LevelConfig.js,
       adiado de propósito pra não arriscar a campanha sem playtesting.
-  [ ] Fase 5 — Modo Caos + Modo 544 Segundos
+  [x] Fase 5 (parcial) — Modo Caos — 2026-08-08. GameScene ganhou um
+      opt-in via data.chaos: gravidade x0.5/x1/x1.6 aleatória, moedas
+      x3 (40% de chance) e câmera invertida (30% de chance, reusa o
+      ThreeEngine.setFlip do boss GLITCH, sempre resetado no destroy).
+      Deliberadamente NÃO mexe em spawn/velocidade de inimigo — mudança
+      mínima e isolada no arquivo mais crítico do jogo, sem playtesting
+      real possível nesta sessão. Acessível pelo Campo de Testes.
+      Falta: Modo 544 Segundos (não implementado — precisa de um
+      orquestrador novo pra encadear cenas diferentes sem menu).
   [ ] Fase 6 — Sistema de Testes por fase (3 testes/fase)
   [ ] Fase 7 — Final ramificado (544 vs 000, loops de replay 2ª-6ª zerada)
   [x] Fase 8 (parcial) — Rankings expandidos — 2026-08-08. RankingScene
