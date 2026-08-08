@@ -304,8 +304,11 @@ export class FootballScene {
     E.plane(1280, 720, map.sky, 640, 360, -400);
 
     // Corredor externo (fora de campo — só o jogador entra aqui, a bola não passa)
+    // z bem mais negativo que o gramado (-10): com a câmera inclinada, a
+    // ordenação de planos transparentes usa distância 3D até a câmera, não
+    // só o z — uma diferença pequena inverte a ordem e o marrom cobre tudo.
     E.plane(OUTER_RIGHT - OUTER_LEFT, OUTER_BOTTOM - OUTER_TOP, RING_COLOR,
-      (OUTER_LEFT + OUTER_RIGHT) / 2, (OUTER_TOP + OUTER_BOTTOM) / 2, -11);
+      (OUTER_LEFT + OUTER_RIGHT) / 2, (OUTER_TOP + OUTER_BOTTOM) / 2, -60);
 
     // Field
     E.plane(1200, 500, map.grass, 640, 390, -10);
